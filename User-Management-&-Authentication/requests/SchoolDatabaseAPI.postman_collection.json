@@ -122,34 +122,6 @@
         }
       },
       "response": []
-    },
-    {
-      "name": "update_role",
-      "request": {
-        "method": "PUT",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\r\n    \"role_id\": \"R02\"\r\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "http://{{school_database_api_uri}}/update_role/U013",
-          "protocol": "http",
-          "host": [
-            "{{school_database_api_uri}}"
-          ],
-          "path": [
-            "update_role",
-            "U013"
-          ]
-        }
-      },
-      "response": []
     }
   ],
   "auth": {

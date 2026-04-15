@@ -135,28 +135,5 @@ def create_user():
         cursor.close()
         connection.close()
 
-#update user role
-@app.route('/update_role/<string:id>', methods=['PUT'])
-@jwt_required()
-def update_user_role(id):
-    # assuming payload looks like: {"role_id": "*****"}
-    new_role_id = request.json.get('role_id')
-    
-    connection = get_db()
-    cursor = connection.cursor()
-    
-    # We update the role_id foreign key
-    query = "UPDATE users SET role_id = %s WHERE user_id = %s"
-    cursor.execute(query, (new_role_id, id))
-    connection.commit()
-    
-    count = cursor.rowcount
-    cursor.close()
-    connection.close()
-    
-    if count == 0:
-        return jsonify({"error": "User not found"}), 404
-    return jsonify({"message": "Role updated successfully"}), 200
-
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
