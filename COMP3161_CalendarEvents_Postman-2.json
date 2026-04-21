@@ -1,0 +1,98 @@
+{
+  "info": {
+    "name": "COMP3161 - Calendar Events",
+    "description": "Postman collection for the Calendar Events module.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000" }
+  ],
+  "item": [
+    {
+      "name": "1. Create Event (success)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"course_id\": 1,\n  \"title\": \"Midterm Exam\",\n  \"description\": \"Chapters 1-4, closed book.\",\n  \"event_date\": \"2025-10-13 09:00:00\",\n  \"created_by\": 1\n}" },
+        "url": { "raw": "{{base_url}}/events", "host": ["{{base_url}}"], "path": ["events"] }
+      }
+    },
+    {
+      "name": "2. Create Event - Assignment Deadline",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"course_id\": 1,\n  \"title\": \"Assignment 1 Due\",\n  \"description\": \"Submit via the portal.\",\n  \"event_date\": \"2025-09-22 23:59:00\",\n  \"created_by\": 1\n}" },
+        "url": { "raw": "{{base_url}}/events", "host": ["{{base_url}}"], "path": ["events"] }
+      }
+    },
+    {
+      "name": "3. Create Event - Missing Fields (should fail)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"course_id\": 1\n}" },
+        "url": { "raw": "{{base_url}}/events", "host": ["{{base_url}}"], "path": ["events"] }
+      }
+    },
+    {
+      "name": "4. Create Event - Invalid Course (should fail)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"course_id\": 9999,\n  \"title\": \"Fake Event\",\n  \"event_date\": \"2025-10-01 10:00:00\",\n  \"created_by\": 1\n}" },
+        "url": { "raw": "{{base_url}}/events", "host": ["{{base_url}}"], "path": ["events"] }
+      }
+    },
+    {
+      "name": "5. Get Events for Course",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/events/course/1", "host": ["{{base_url}}"], "path": ["events", "course", "1"] }
+      }
+    },
+    {
+      "name": "6. Get Events for Course - Invalid (should fail)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/events/course/9999", "host": ["{{base_url}}"], "path": ["events", "course", "9999"] }
+      }
+    },
+    {
+      "name": "7. Get Events for Student (all dates)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/events/student/100", "host": ["{{base_url}}"], "path": ["events", "student", "100"] }
+      }
+    },
+    {
+      "name": "8. Get Events for Student on Specific Date",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/events/student/100?date=2025-10-13",
+          "host": ["{{base_url}}"],
+          "path": ["events", "student", "100"],
+          "query": [{ "key": "date", "value": "2025-10-13" }]
+        }
+      }
+    },
+    {
+      "name": "9. Get Events for Student - Invalid (should fail)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/events/student/9999?date=2025-10-13",
+          "host": ["{{base_url}}"],
+          "path": ["events", "student", "9999"],
+          "query": [{ "key": "date", "value": "2025-10-13" }]
+        }
+      }
+    }
+  ]
+}
