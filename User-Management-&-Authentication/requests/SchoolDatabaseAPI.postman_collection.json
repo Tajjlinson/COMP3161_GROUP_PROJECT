@@ -1,0 +1,161 @@
+{
+  "info": {
+    "_postman_id": "f15a8c72-2d41-4507-891c-dd8e725f8ead",
+    "name": "SchoolDatabaseAPI",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53220355",
+    "_collection_link": "https://go.postman.co/collection/53220355-f15a8c72-2d41-4507-891c-dd8e725f8ead?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json;\r",
+              "try { json = pm.response.json(); } catch (e) {}\r",
+              "\r",
+              "if (pm.response.code === 200 && json?.access_token) {\r",
+              "  pm.environment.set(\"jwt_token\", json.access_token);\r",
+              "}\r",
+              "\r",
+              "pm.test(\"Got access_token\", () => {\r",
+              "  if (pm.response.code === 200) {\r",
+              "    pm.expect(json).to.have.property(\"access_token\");\r",
+              "    pm.expect(json.access_token).to.be.a(\"string\").and.not.be.empty;\r",
+              "  }\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"username\": \"sys_admin\",\r\n    \"password\": \"admin123\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://{{school_database_api_uri}}/login",
+          "protocol": "http",
+          "host": [
+            "{{school_database_api_uri}}"
+          ],
+          "path": [
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get_user",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://{{school_database_api_uri}}/user/U011",
+          "protocol": "http",
+          "host": [
+            "{{school_database_api_uri}}"
+          ],
+          "path": [
+            "user",
+            "U011"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get_all_users",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://{{school_database_api_uri}}/user",
+          "protocol": "http",
+          "host": [
+            "{{school_database_api_uri}}"
+          ],
+          "path": [
+            "user"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "create_user",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"user_id\": \"U013\",\r\n  \"username\": \"test_student3\",\r\n  \"password\": \"password12345\",\r\n  \"role_id\": \"R03\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://{{school_database_api_uri}}/create_user",
+          "protocol": "http",
+          "host": [
+            "{{school_database_api_uri}}"
+          ],
+          "path": [
+            "create_user"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}

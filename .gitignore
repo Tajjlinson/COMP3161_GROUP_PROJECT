@@ -1,0 +1,5 @@
+.env
+.venv/
+User-Management-&-Authentication/app/schema_script.py
+User-Management-&-Authentication/data/
+User-Management-&-Authentication/schema/
