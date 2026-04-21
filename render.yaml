@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: comp3161-course-management
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /api
+    envVars:
+      - key: APP_SECRET
+        generateValue: true
+      - key: PORT
+        value: "10000"
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: "comp3161_db"
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: comp3161-cache
+          property: connectionString
+
+  - type: keyvalue
+    name: comp3161-cache
+    plan: free

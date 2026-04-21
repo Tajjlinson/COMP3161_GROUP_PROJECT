@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="container py-4">
+    <div class="hero-panel mb-4">
+        <div>
+            <p class="eyebrow mb-2">Course Management System</p>
+            <h1 class="display-6 fw-bold mb-2">{{ frontend_user.role|title }} Dashboard</h1>
+            <p class="mb-0 text-muted">This frontend uses the raw-SQL API to manage courses, enrollments, content, forums, events, and reports.</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card stat-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Active Role</p>
+                            <h3 class="mb-0">{{ frontend_user.role|title }}</h3>
+                        </div>
+                        <i class="fas fa-user-tag stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Visible Courses</p>
+                            <h3 class="mb-0" id="course-count">0</h3>
+                        </div>
+                        <i class="fas fa-book-open stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Quick Access</p>
+                            <h3 class="mb-0">API + UI</h3>
+                        </div>
+                        <i class="fas fa-layer-group stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if frontend_user.role == 'admin' %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3">Create Course</h2>
+            <form id="create-course-form" class="row g-3">
+                <div class="col-md-3">
+                    <input class="form-control" name="course_code" placeholder="COMP4500" required>
+                </div>
+                <div class="col-md-4">
+                    <input class="form-control" name="course_name" placeholder="Course name" required>
+                </div>
+                <div class="col-md-4">
+                    <input class="form-control" name="description" placeholder="Description">
+                </div>
+                <div class="col-md-1 d-grid">
+                    <button class="btn btn-primary" type="submit">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Courses</h2>
+                        <span class="badge bg-dark" id="course-badge">0 loaded</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="courses-table-body">
+                                <tr><td colspan="3" class="text-muted">Loading courses...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Report Preview</h2>
+                    <div id="report-preview" class="small text-muted">Loading report summary...</div>
+                </div>
+            </div>
+
+            {% if frontend_user.role == 'student' %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Enroll in Course</h2>
+                    <form id="student-enroll-form">
+                        <div class="mb-3">
+                            <input class="form-control" type="number" name="course_id" placeholder="Course ID" required>
+                        </div>
+                        <button class="btn btn-outline-primary w-100" type="submit">Enroll</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

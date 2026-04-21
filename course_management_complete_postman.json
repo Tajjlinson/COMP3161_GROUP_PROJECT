@@ -1,0 +1,107 @@
+{
+  "info": {
+    "name": "COMP3161 Complete Course Management API",
+    "_postman_id": "dc2f8d3f-71cb-4f13-8fd1-3e53e0a65224",
+    "description": "Postman collection for the consolidated COMP3161 final project API.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_code\": \"stud900001\",\n  \"full_name\": \"Test Student\",\n  \"email\": \"stud900001@school.edu\",\n  \"password\": \"student123\",\n  \"role\": \"student\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+      }
+    },
+    {
+      "name": "Auth - Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_code\": \"admin001\",\n  \"password\": \"admin123\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+      }
+    },
+    {
+      "name": "Courses - Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"course_code\": \"COMP3999\",\n  \"course_name\": \"Advanced Database Systems\",\n  \"description\": \"Capstone course\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/courses", "host": ["{{base_url}}"], "path": ["courses"] }
+      }
+    },
+    {
+      "name": "Courses - Get All",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "{{base_url}}/courses", "host": ["{{base_url}}"], "path": ["courses"] }
+      }
+    },
+    {
+      "name": "Forums - Create Thread",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Question about Assignment 1\",\n  \"body\": \"Can someone explain the grading rubric?\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/forums/1/threads", "host": ["{{base_url}}"], "path": ["forums", "1", "threads"] }
+      }
+    },
+    {
+      "name": "Assignments - Grade Submission",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"score\": 88,\n  \"feedback\": \"Good work\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/submissions/1/grade", "host": ["{{base_url}}"], "path": ["submissions", "1", "grade"] }
+      }
+    },
+    {
+      "name": "Reports - Top 10 Students",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "{{base_url}}/reports/top-10-students", "host": ["{{base_url}}"], "path": ["reports", "top-10-students"] }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:5000" },
+    { "key": "token", "value": "" }
+  ]
+}

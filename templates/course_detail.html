@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Course Detail{% endblock %}
+
+{% block content %}
+<section class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <p class="eyebrow mb-1">Course Workspace</p>
+            <h1 class="h3 mb-0">Course #{{ course_id }}</h1>
+        </div>
+        <a href="{{ url_for('frontend_dashboard') }}" class="btn btn-outline-dark">
+            <i class="fas fa-arrow-left me-2"></i>Back
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Members</h2>
+                    <ul class="list-group list-group-flush" id="members-list">
+                        <li class="list-group-item text-muted">Loading members...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Calendar Events</h2>
+                    <ul class="list-group list-group-flush" id="events-list">
+                        <li class="list-group-item text-muted">Loading events...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Forums</h2>
+                    <ul class="list-group list-group-flush" id="forums-list">
+                        <li class="list-group-item text-muted">Loading forums...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Course Content</h2>
+                    <ul class="list-group list-group-flush" id="content-list">
+                        <li class="list-group-item text-muted">Loading content...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.COURSE_ID = {{ course_id }};
+</script>
+<script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
+{% endblock %}

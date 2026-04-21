@@ -1,0 +1,43 @@
+body {
+    background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+    color: #18212f;
+    min-height: 100vh;
+}
+
+.main-content {
+    padding-bottom: 3rem;
+}
+
+.hero-panel {
+    background: radial-gradient(circle at top left, rgba(34, 111, 235, 0.14), transparent 42%), #ffffff;
+    border: 1px solid rgba(24, 33, 47, 0.08);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.eyebrow {
+    color: #226feb;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.stat-card {
+    border-radius: 1rem;
+}
+
+.stat-icon {
+    color: #226feb;
+    font-size: 1.8rem;
+}
+
+.card {
+    border-radius: 1rem;
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+}
