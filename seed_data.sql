@@ -1,11 +1,11 @@
 USE comp3161_db;
 
-DROP TEMPORARY TABLE IF EXISTS digits;
-CREATE TEMPORARY TABLE digits (
+DROP TABLE IF EXISTS seed_digits;
+CREATE TABLE seed_digits (
     d TINYINT PRIMARY KEY
 );
 
-INSERT INTO digits (d) VALUES
+INSERT INTO seed_digits (d) VALUES
     (0), (1), (2), (3), (4), (5), (6), (7), (8), (9);
 
 INSERT INTO users (user_code, full_name, email, password_hash, role_id)
@@ -26,8 +26,8 @@ SELECT
 FROM (
     SELECT
         ROW_NUMBER() OVER (ORDER BY a.d, b.d) AS seq_num
-    FROM digits a
-    CROSS JOIN digits b
+    FROM seed_digits a
+    CROSS JOIN seed_digits b
     LIMIT 40
 ) numbered_lecturers;
 
@@ -41,11 +41,11 @@ SELECT
 FROM (
     SELECT
         ROW_NUMBER() OVER (ORDER BY a.d, b.d, c.d, d.d, e.d) AS seq_num
-    FROM digits a
-    CROSS JOIN digits b
-    CROSS JOIN digits c
-    CROSS JOIN digits d
-    CROSS JOIN digits e
+    FROM seed_digits a
+    CROSS JOIN seed_digits b
+    CROSS JOIN seed_digits c
+    CROSS JOIN seed_digits d
+    CROSS JOIN seed_digits e
     LIMIT 100000
 ) numbered_students;
 
@@ -58,9 +58,9 @@ SELECT
 FROM (
     SELECT
         ROW_NUMBER() OVER (ORDER BY a.d, b.d, c.d) AS seq_num
-    FROM digits a
-    CROSS JOIN digits b
-    CROSS JOIN digits c
+    FROM seed_digits a
+    CROSS JOIN seed_digits b
+    CROSS JOIN seed_digits c
     LIMIT 200
 ) numbered_courses;
 
@@ -222,3 +222,5 @@ SELECT
 FROM assignment_submissions s
 JOIN assignments a ON a.assignment_id = s.assignment_id
 JOIN course_lecturers cl ON cl.course_id = a.course_id;
+
+DROP TABLE seed_digits;
