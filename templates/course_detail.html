@@ -392,6 +392,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script>window.COURSE_ID = {{ course_id }};</script>
-<script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
+<script>window.COURSE_ID = '{{ course_id }}';</script>
+<script src="{{ url_for('static', filename='/js/course_detail.js') }}"></script>
 {% endblock %}

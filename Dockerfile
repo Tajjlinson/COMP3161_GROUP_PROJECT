@@ -12,4 +12,4 @@ COPY . .
 
 ENV PORT=10000
 
-CMD ["/bin/sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} complete_course_management_api:app"]
+CMD ["gunicorn", "wsgi:app", "--bind", "0.0.0.0:10000"]
