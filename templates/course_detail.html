@@ -3,65 +3,395 @@
 {% block title %}Course Detail{% endblock %}
 
 {% block content %}
-<section class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <p class="eyebrow mb-1">Course Workspace</p>
-            <h1 class="h3 mb-0">Course #{{ course_id }}</h1>
-        </div>
-        <a href="{{ url_for('frontend_dashboard') }}" class="btn btn-outline-dark">
-            <i class="fas fa-arrow-left me-2"></i>Back
-        </a>
+<div class="cms-page">
+
+  <!-- Page Header -->
+  <div class="cms-header">
+    <div class="cms-header-left">
+      <span class="cms-eyebrow">Course Workspace</span>
+      <h1 class="cms-title" id="course-title">Course #{{ course_id }}</h1>
+      <p class="cms-subtitle" id="course-subtitle">Loading course details…</p>
+    </div>
+    <div class="cms-header-actions">
+      <button class="cms-btn cms-btn-ghost" id="refresh-course-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Refresh
+      </button>
+      <a href="{{ url_for('frontend_dashboard') }}" class="cms-btn cms-btn-ghost">← Back</a>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="cms-stats-row cms-stats-4">
+    <div class="cms-stat-card">
+      <p class="cms-stat-label">Members</p>
+      <h3 class="cms-stat-value" id="members-count">0</h3>
+    </div>
+    <div class="cms-stat-card">
+      <p class="cms-stat-label">Events</p>
+      <h3 class="cms-stat-value" id="events-count">0</h3>
+    </div>
+    <div class="cms-stat-card">
+      <p class="cms-stat-label">Assignments</p>
+      <h3 class="cms-stat-value" id="assignments-count">0</h3>
+    </div>
+    <div class="cms-stat-card">
+      <p class="cms-stat-label">Content Items</p>
+      <h3 class="cms-stat-value" id="content-count">0</h3>
+    </div>
+  </div>
+
+  <!-- Body grid -->
+  <div class="cms-grid-3-9">
+
+    <!-- Members sidebar -->
+    <div class="cms-card cms-members-panel">
+      <div class="cms-card-header">
+        <h2 class="cms-card-title">Members</h2>
+        <span class="cms-badge" id="member-role-summary">0 loaded</span>
+      </div>
+      <ul class="cms-member-list" id="members-list">
+        <li class="cms-member-item cms-muted">Loading members…</li>
+      </ul>
     </div>
 
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <h2 class="h5 mb-3">Members</h2>
-                    <ul class="list-group list-group-flush" id="members-list">
-                        <li class="list-group-item text-muted">Loading members...</li>
-                    </ul>
-                </div>
+    <!-- Main workspace -->
+    <div class="cms-card">
+
+      <!-- Tab nav -->
+      <div class="cms-tabs" id="workspace-tabs">
+        <button class="cms-tab cms-tab-active" data-panel="events-panel" type="button">Calendar Events</button>
+        <button class="cms-tab" data-panel="content-panel" type="button">Content</button>
+        <button class="cms-tab" data-panel="assignments-panel" type="button">Assignments</button>
+        <button class="cms-tab" data-panel="forums-panel" type="button">Forums</button>
+      </div>
+
+      <!-- ── EVENTS PANEL ── -->
+      <div class="cms-panel cms-panel-active" id="events-panel">
+
+        {% if frontend_user.role in ['admin', 'lecturer'] %}
+        <div class="cms-well cms-mb">
+          <p class="cms-well-title">Create Calendar Event</p>
+          <form id="create-event-form" class="cms-stack-sm">
+            <div class="cms-form-row">
+              <div class="cms-field">
+                <label class="cms-label">Event Title</label>
+                <input class="cms-input" name="title" placeholder="Midterm Exam" required>
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Start Date &amp; Time</label>
+                <input class="cms-input" type="datetime-local" name="start_datetime" required>
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">End Date &amp; Time</label>
+                <input class="cms-input" type="datetime-local" name="end_datetime">
+              </div>
             </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <h2 class="h5 mb-3">Calendar Events</h2>
-                    <ul class="list-group list-group-flush" id="events-list">
-                        <li class="list-group-item text-muted">Loading events...</li>
-                    </ul>
-                </div>
+            <div class="cms-field">
+              <label class="cms-label">Description</label>
+              <textarea class="cms-textarea" name="description" rows="2" placeholder="Optional details…"></textarea>
             </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <h2 class="h5 mb-3">Forums</h2>
-                    <ul class="list-group list-group-flush" id="forums-list">
-                        <li class="list-group-item text-muted">Loading forums...</li>
-                    </ul>
-                </div>
+            <div style="display:flex;justify-content:flex-end">
+              <button class="cms-btn cms-btn-primary" type="submit">Create Event</button>
             </div>
+          </form>
         </div>
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <h2 class="h5 mb-3">Course Content</h2>
-                    <ul class="list-group list-group-flush" id="content-list">
-                        <li class="list-group-item text-muted">Loading content...</li>
-                    </ul>
+        {% endif %}
+
+        <ul class="cms-list" id="events-list">
+          <li class="cms-list-item cms-muted">Loading events…</li>
+        </ul>
+      </div>
+
+      <!-- ── CONTENT PANEL ── -->
+      <div class="cms-panel" id="content-panel">
+
+        {% if frontend_user.role in ['admin', 'lecturer'] %}
+        <div class="cms-grid-2 cms-mb">
+
+          <!-- Create Section -->
+          <div class="cms-well">
+            <p class="cms-well-title">Create Section</p>
+            <form id="create-section-form" class="cms-stack-sm">
+              <div class="cms-field">
+                <label class="cms-label">Section Title</label>
+                <input class="cms-input" name="title" placeholder="Week 3 — Arrays" required>
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Position</label>
+                <input class="cms-input" type="number" min="1" name="position_no" placeholder="3" required>
+              </div>
+              <button class="cms-btn cms-btn-ghost" type="submit" style="width:100%">Add Section</button>
+            </form>
+          </div>
+
+          <!-- Add Content -->
+          <div class="cms-well">
+            <p class="cms-well-title">Add Content Item</p>
+            <form id="add-content-form" class="cms-stack-sm">
+              <div class="cms-form-row">
+                <div class="cms-field">
+                  <label class="cms-label">Section</label>
+                  <select class="cms-select" name="section_id" id="section-select" required>
+                    <option value="">Select section</option>
+                  </select>
                 </div>
-            </div>
+                <div class="cms-field">
+                  <label class="cms-label">Type</label>
+                  <select class="cms-select" name="content_type" required>
+                    <option value="slide">Slide</option>
+                    <option value="link">Link</option>
+                    <option value="file">File</option>
+                  </select>
+                </div>
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Title</label>
+                <input class="cms-input" name="title" placeholder="Week 1 Slides" required>
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Resource URL</label>
+                <input class="cms-input" name="resource_url" placeholder="https://…">
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Local File Reference</label>
+                <input class="cms-input" name="file_reference" placeholder="slides/week1.pdf">
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Upload File</label>
+                <input class="cms-file-input" type="file" name="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.zip,.mp4">
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Description</label>
+                <textarea class="cms-textarea" name="description" rows="2" placeholder="Brief description…"></textarea>
+              </div>
+              <button class="cms-btn cms-btn-primary" type="submit" style="width:100%">Post Content</button>
+            </form>
+            <div id="add-content-result" class="cms-result-box d-none"></div>
+          </div>
         </div>
-    </div>
-</section>
+
+        <!-- Edit existing content -->
+        <div class="cms-well cms-mb">
+          <div class="cms-card-header" style="margin-bottom:12px">
+            <div>
+              <p class="cms-well-title" id="selected-content-editor-title">Select a content item to edit</p>
+              <p class="cms-hint">Admins and lecturers can edit existing course content and replace attached files.</p>
+            </div>
+          </div>
+          <form id="edit-content-form" class="cms-stack-sm">
+            <input type="hidden" name="content_id" id="edit-content-id">
+            <div class="cms-form-row">
+              <div class="cms-field">
+                <label class="cms-label">Title</label>
+                <input class="cms-input" name="title" placeholder="Content title" required>
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Type</label>
+                <select class="cms-select" name="content_type" required>
+                  <option value="slide">Slide</option>
+                  <option value="link">Link</option>
+                  <option value="file">File</option>
+                </select>
+              </div>
+            </div>
+            <div class="cms-field">
+              <label class="cms-label">Resource URL</label>
+              <input class="cms-input" name="resource_url" placeholder="https://…">
+            </div>
+            <div class="cms-field">
+              <label class="cms-label">File Reference</label>
+              <input class="cms-input" name="file_reference" placeholder="Existing local file reference">
+            </div>
+            <div class="cms-field">
+              <label class="cms-label">Replace File</label>
+              <input class="cms-file-input" type="file" name="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.zip,.mp4">
+            </div>
+            <div class="cms-field">
+              <label class="cms-label">Description</label>
+              <textarea class="cms-textarea" name="description" rows="2" placeholder="Description…"></textarea>
+            </div>
+            <button class="cms-btn cms-btn-ghost" type="submit" style="width:100%">Update Content</button>
+          </form>
+          <div id="edit-content-result" class="cms-result-box d-none"></div>
+        </div>
+        {% endif %}
+
+        <!-- Content list -->
+        <div id="content-list" class="cms-stack-sm">
+          <div class="cms-muted">Loading content…</div>
+        </div>
+
+
+      </div>
+
+      <!-- ASSIGNMENTS PANEL -->
+      <div class="cms-panel" id="assignments-panel">
+
+        {% if frontend_user.role in ['admin', 'lecturer'] %}
+        <div class="asgn-create-bar">
+          <button class="cms-btn cms-btn-ghost cms-btn-sm" type="button" id="toggle-create-assignment-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Assignment
+          </button>
+          <p class="cms-hint" id="assignment-summary-text" style="margin:0">Track submissions, grades, and averages here.</p>
+        </div>
+        <div class="cms-well cms-mb d-none" id="create-assignment-panel">
+          <p class="cms-well-title">Create Assignment</p>
+          <form id="create-assignment-form" class="cms-stack-sm">
+            <div class="cms-form-row">
+              <div class="cms-field" style="flex:2">
+                <label class="cms-label">Title</label>
+                <input class="cms-input" name="title" placeholder="Lab 1: MySQL Setup" required>
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Due Date</label>
+                <input class="cms-input" type="datetime-local" name="due_datetime" required>
+              </div>
+              <div class="cms-field">
+                <label class="cms-label">Max Score</label>
+                <input class="cms-input" type="number" name="max_score" value="100" min="1" required>
+              </div>
+            </div>
+            <div class="cms-field">
+              <label class="cms-label">Description</label>
+              <textarea class="cms-textarea" name="description" rows="2" placeholder="Assignment instructions…"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="cms-btn cms-btn-ghost cms-btn-sm" type="button" id="cancel-create-assignment-btn">Cancel</button>
+              <button class="cms-btn cms-btn-primary cms-btn-sm" type="submit">Create Assignment</button>
+            </div>
+          </form>
+        </div>
+        {% else %}
+        <p class="cms-hint cms-mb" id="assignment-summary-text">Track submissions, grades, and averages here.</p>
+        {% endif %}
+
+        <div class="asgn-shell">
+
+          <div class="asgn-list-col">
+            <p class="cms-section-label">Assignments</p>
+            <div id="assignments-list" class="asgn-list">
+              <div class="cms-muted" style="padding:12px;font-size:12.5px">Loading assignments…</div>
+            </div>
+          </div>
+
+          <div class="asgn-detail-col">
+            <div id="asgn-detail-panel" class="asgn-detail-empty">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="color:var(--text-3)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <p>Select an assignment</p>
+              <p class="cms-hint">Details and submissions will appear here</p>
+            </div>
+          </div>
+
+        </div>
+
+        <div id="assignment-submissions-list" style="display:none"></div>
+        <p id="selected-assignment-title" style="display:none"></p>
+      </div>
+
+      <!-- ── FORUMS PANEL ── -->
+      <div class="cms-panel" id="forums-panel">
+        <div class="chat-shell">
+
+          <!-- ── Col 1: Forums ── -->
+          <div class="chat-col chat-col-forums">
+            <div class="chat-col-header">
+              <span class="chat-col-title">Forums</span>
+              {% if frontend_user.role in ['admin', 'lecturer'] %}
+              <button class="chat-icon-btn" type="button" id="toggle-new-forum-btn" title="New forum">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              {% endif %}
+            </div>
+
+            {% if frontend_user.role in ['admin', 'lecturer'] %}
+            <form id="create-forum-form" class="chat-new-form d-none">
+              <input class="cms-input" name="title" placeholder="Forum name…" required>
+              <input class="cms-input" name="description" placeholder="Description…">
+              <div class="chat-new-form-actions">
+                <button class="cms-btn cms-btn-ghost cms-btn-sm" type="button" id="cancel-new-forum-btn">Cancel</button>
+                <button class="cms-btn cms-btn-primary cms-btn-sm" type="submit">Create</button>
+              </div>
+            </form>
+            {% endif %}
+
+            <div id="forums-list" class="chat-list">
+              <div class="chat-empty-sm">Loading forums…</div>
+            </div>
+          </div>
+
+          <!-- ── Col 2: Threads ── -->
+          <div class="chat-col chat-col-threads">
+            <div class="chat-col-header">
+              <div class="chat-col-header-text">
+                <span class="chat-col-title" id="selected-forum-title">Threads</span>
+                <span class="chat-col-sub" id="selected-forum-subtitle">Select a forum</span>
+              </div>
+              <button class="chat-icon-btn" type="button" id="toggle-new-thread-btn" title="New thread">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+
+            <form id="create-thread-form" class="chat-new-form d-none">
+              <input type="hidden" name="forum_id" id="thread-forum-id">
+              <input class="cms-input" name="title" placeholder="Thread title…" required>
+              <textarea class="cms-textarea" name="body" rows="3" placeholder="Opening post…" required style="font-size:12.5px"></textarea>
+              <div class="chat-new-form-actions">
+                <button class="cms-btn cms-btn-ghost cms-btn-sm" type="button" id="cancel-new-thread-btn">Cancel</button>
+                <button class="cms-btn cms-btn-primary cms-btn-sm" type="submit">Post</button>
+              </div>
+            </form>
+
+            <div id="threads-list" class="chat-list">
+              <div class="chat-empty-sm">Select a forum.</div>
+            </div>
+          </div>
+
+          <!-- ── Col 3: Chat messages ── -->
+          <div class="chat-col chat-col-messages">
+            <div class="chat-col-header">
+              <div class="chat-col-header-text">
+                <span class="chat-col-title" id="selected-thread-title">Messages</span>
+                <span class="chat-col-sub">Select a thread to start chatting</span>
+              </div>
+            </div>
+
+            <div class="chat-feed" id="thread-posts-list">
+              <div class="chat-empty">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <p>No thread selected</p>
+                <p class="chat-empty-sub">Pick a thread from the list to read and reply</p>
+              </div>
+            </div>
+
+            <div class="chat-input-bar">
+              <div class="chat-reply-banner d-none" id="reply-banner">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+                <span id="reply-banner-text">Replying to…</span>
+                <button type="button" class="chat-reply-cancel" id="cancel-reply-btn">✕</button>
+              </div>
+              <form id="reply-form" class="chat-input-form">
+                <input type="hidden" name="thread_id" id="reply-thread-id">
+                <input type="hidden" name="parent_post_id" id="reply-parent-id">
+                <textarea class="chat-textarea" name="body" id="chat-message-input" rows="1"
+                  placeholder="Write a message… (Enter to send, Shift+Enter for newline)" required></textarea>
+                <button class="chat-send-btn" type="submit" title="Send">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </form>
+            </div>
+          </div>
+
+        </div><!-- /chat-shell -->
+      </div>
+
+    </div><!-- /main workspace -->
+  </div><!-- /grid -->
+</div><!-- /page -->
 {% endblock %}
 
 {% block scripts %}
-<script>
-    window.COURSE_ID = {{ course_id }};
-</script>
+<script>window.COURSE_ID = {{ course_id }};</script>
 <script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
 {% endblock %}

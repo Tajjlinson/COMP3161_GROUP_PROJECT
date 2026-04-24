@@ -3,129 +3,300 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<section class="container py-4">
-    <div class="hero-panel mb-4">
+<div class="cms-page">
+
+  <!-- Page Header -->
+  <div class="cms-header">
+    <div class="cms-header-left">
+      <span class="cms-eyebrow">Course Management System</span>
+      <h1 class="cms-title">{{ frontend_user.role|title }} Dashboard</h1>
+      <p class="cms-subtitle">Manage courses, enrollments, content, forums, events and reports.</p>
+    </div>
+    <div class="cms-header-actions">
+      <button class="cms-btn cms-btn-ghost" id="refresh-dashboard-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="cms-stats-row">
+    <div class="cms-stat-card">
+      <div class="cms-stat-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      </div>
+      <div>
+        <p class="cms-stat-label">Active Role</p>
+        <span class="cms-role-badge cms-role-{{ frontend_user.role }}">{{ frontend_user.role|title }}</span>
+      </div>
+    </div>
+    <div class="cms-stat-card">
+      <div class="cms-stat-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </div>
+      <div>
+        <p class="cms-stat-label">Visible Courses</p>
+        <h3 class="cms-stat-value" id="course-count">—</h3>
+      </div>
+    </div>
+    <div class="cms-stat-card">
+      <div class="cms-stat-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </div>
+      <div>
+        <p class="cms-stat-label">Interface</p>
+        <p class="cms-stat-value" style="font-size:14px">API + UI</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin: Create Course -->
+  {% if frontend_user.role == 'admin' %}
+  <div class="cms-card cms-mb">
+    <div class="cms-card-header">
+      <h2 class="cms-card-title">Create Course</h2>
+    </div>
+    <form id="create-course-form" class="cms-form-row">
+      <div class="cms-field">
+        <label class="cms-label">Course Code</label>
+        <input class="cms-input" name="course_code" placeholder="COMP4500" required>
+      </div>
+      <div class="cms-field" style="flex:2">
+        <label class="cms-label">Course Name</label>
+        <input class="cms-input" name="course_name" placeholder="Advanced Algorithms" required>
+      </div>
+      <div class="cms-field" style="flex:2">
+        <label class="cms-label">Description</label>
+        <input class="cms-input" name="description" placeholder="Optional description">
+      </div>
+      <div class="cms-field cms-field-end">
+        <label class="cms-label">&nbsp;</label>
+        <button class="cms-btn cms-btn-primary" type="submit">Add Course</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Main grid -->
+  <div class="cms-grid-8-4">
+
+    <!-- Courses table -->
+    <div class="cms-card">
+      <div class="cms-card-header">
+        <h2 class="cms-card-title">Courses</h2>
+        <div style="display: flex; gap: 8px;">
+          <span class="cms-badge" id="course-badge">0 loaded</span>
+          <button class="cms-btn cms-btn-ghost cms-btn-sm" id="export-courses-btn" style="display: none;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export CSV
+          </button>
+        </div>
+      </div>
+      <div class="cms-table-wrap">
+        <table class="cms-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="courses-table-body">
+            <tr><td colspan="3" class="cms-td-muted">Loading courses…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="cms-stack">
+
+      <!-- Report preview -->
+      <div class="cms-card">
+        <div class="cms-card-header">
+          <h2 class="cms-card-title">Report Preview</h2>
+          <button class="cms-btn cms-btn-ghost cms-btn-sm" id="export-preview-btn" style="display: none;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export Preview
+          </button>
+        </div>
+        <div id="report-preview" class="cms-muted" style="font-size:13px">Loading…</div>
+      </div>
+
+      <!-- Student: Enroll -->
+      {% if frontend_user.role == 'student' %}
+      <div class="cms-card">
+        <div class="cms-card-header">
+          <h2 class="cms-card-title">Enroll in Course</h2>
+        </div>
+        <form id="student-enroll-form" class="cms-stack-sm">
+          <div class="cms-field">
+            <label class="cms-label">Course ID</label>
+            <input class="cms-input" type="number" name="course_id" placeholder="e.g. 12" required>
+          </div>
+          <button class="cms-btn cms-btn-primary" type="submit" style="width:100%">Enroll</button>
+        </form>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Admin/Lecturer: Lookup Tools -->
+  {% if frontend_user.role in ['admin', 'lecturer'] %}
+  <div class="cms-grid-2 cms-mt">
+
+    <!-- Course retrieval -->
+    <div class="cms-card">
+      <div class="cms-card-header">
+        <h2 class="cms-card-title">Course Retrieval Tools</h2>
+      </div>
+      <div class="cms-stack-sm">
+        <div class="cms-well">
+          <p class="cms-well-title">Courses for Student</p>
+          <form id="student-course-lookup-form" class="cms-inline-form">
+            <input class="cms-input" type="number" name="student_id" placeholder="Student ID" required>
+            <button class="cms-btn cms-btn-ghost" type="submit">Look up</button>
+          </form>
+        </div>
+        <div class="cms-well">
+          <p class="cms-well-title">Courses for Lecturer</p>
+          <form id="lecturer-course-lookup-form" class="cms-inline-form">
+            <input class="cms-input" type="number" name="lecturer_id" placeholder="Lecturer ID" required>
+            <button class="cms-btn cms-btn-ghost" type="submit">Look up</button>
+          </form>
+        </div>
         <div>
-            <p class="eyebrow mb-2">Course Management System</p>
-            <h1 class="display-6 fw-bold mb-2">{{ frontend_user.role|title }} Dashboard</h1>
-            <p class="mb-0 text-muted">This frontend uses the raw-SQL API to manage courses, enrollments, content, forums, events, and reports.</p>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <p class="cms-section-label" style="margin: 0;">Results</p>
+            <button class="cms-btn cms-btn-ghost cms-btn-sm" id="export-lookup-results-btn" style="display: none;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export Results
+            </button>
+          </div>
+          <div id="lookup-results" class="cms-lookup-shell">Run a lookup to see results.</div>
         </div>
+      </div>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1">Active Role</p>
-                            <h3 class="mb-0">{{ frontend_user.role|title }}</h3>
-                        </div>
-                        <i class="fas fa-user-tag stat-icon"></i>
-                    </div>
-                </div>
-            </div>
+    <!-- Calendar + Assign Lecturer -->
+    <div class="cms-card">
+      <div class="cms-card-header">
+        <h2 class="cms-card-title">Student Calendar Lookup</h2>
+      </div>
+      <form id="student-events-lookup-form" class="cms-inline-form cms-mb">
+        <input class="cms-input" type="number" name="student_id" placeholder="Student ID" required>
+        <input class="cms-input" type="date" name="date" required>
+        <button class="cms-btn cms-btn-ghost" type="submit">Load</button>
+      </form>
+      <div>
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+          <button class="cms-btn cms-btn-ghost cms-btn-sm" id="export-events-results-btn" style="display: none;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export Events
+          </button>
         </div>
-        <div class="col-md-4">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1">Visible Courses</p>
-                            <h3 class="mb-0" id="course-count">0</h3>
-                        </div>
-                        <i class="fas fa-book-open stat-icon"></i>
-                    </div>
-                </div>
-            </div>
+        <div id="student-events-results" class="cms-lookup-shell cms-mb">
+          Events for a student on a specific date appear here.
         </div>
-        <div class="col-md-4">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1">Quick Access</p>
-                            <h3 class="mb-0">API + UI</h3>
-                        </div>
-                        <i class="fas fa-layer-group stat-icon"></i>
-                    </div>
-                </div>
-            </div>
+      </div>
+
+      {% if frontend_user.role == 'admin' %}
+      <div class="cms-divider"></div>
+      <p class="cms-well-title" style="margin-bottom:10px">Assign Lecturer to Course</p>
+      <form id="assign-lecturer-form" class="cms-inline-form">
+        <input class="cms-input" type="number" name="course_id" placeholder="Course ID" required>
+        <input class="cms-input" type="number" name="lecturer_id" placeholder="Lecturer ID" required>
+        <button class="cms-btn cms-btn-primary" type="submit">Assign</button>
+      </form>
+      <p class="cms-hint">Only one lecturer can be assigned per course.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Admin: Reports -->
+  {% if frontend_user.role == 'admin' %}
+  <div class="cms-card cms-mt">
+    <div class="cms-card-header">
+      <div>
+        <h2 class="cms-card-title">Reports</h2>
+        <p class="cms-muted" style="font-size:12px;margin-top:2px">Assignment-required reporting views from the API.</p>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="cms-btn cms-btn-primary cms-btn-sm" id="export-all-reports-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export All Reports
+        </button>
+        <div class="cms-report-tabs" id="report-tabs">
+          <button class="cms-rtab cms-rtab-active" data-report="courses-50-plus" type="button">50+ Students</button>
+          <button class="cms-rtab" data-report="students-5-plus" type="button">Students 5+ Courses</button>
+          <button class="cms-rtab" data-report="lecturers-3-plus" type="button">Lecturers 3+ Courses</button>
+          <button class="cms-rtab" data-report="top-10-courses" type="button">Top 10 Courses</button>
+          <button class="cms-rtab" data-report="top-10-students" type="button">Top 10 Students</button>
         </div>
+      </div>
     </div>
 
-    {% if frontend_user.role == 'admin' %}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <h2 class="h5 mb-3">Create Course</h2>
-            <form id="create-course-form" class="row g-3">
-                <div class="col-md-3">
-                    <input class="form-control" name="course_code" placeholder="COMP4500" required>
-                </div>
-                <div class="col-md-4">
-                    <input class="form-control" name="course_name" placeholder="Course name" required>
-                </div>
-                <div class="col-md-4">
-                    <input class="form-control" name="description" placeholder="Description">
-                </div>
-                <div class="col-md-1 d-grid">
-                    <button class="btn btn-primary" type="submit">Add</button>
-                </div>
-            </form>
-        </div>
+    <div class="cms-report-meta">
+      <div>
+        <p class="cms-report-title" id="report-title">Courses With 50 or More Students</p>
+        <p class="cms-muted" style="font-size:12px" id="report-description">Loading…</p>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span class="cms-badge" id="report-count-badge">0 rows</span>
+        <button class="cms-btn cms-btn-ghost cms-btn-sm" id="download-report-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download CSV
+        </button>
+        <button class="cms-btn cms-btn-ghost cms-btn-sm" id="download-table-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download Table
+        </button>
+      </div>
     </div>
-    {% endif %}
 
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Courses</h2>
-                        <span class="badge bg-dark" id="course-badge">0 loaded</span>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Code</th>
-                                    <th>Name</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="courses-table-body">
-                                <tr><td colspan="3" class="text-muted">Loading courses...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body">
-                    <h2 class="h5 mb-3">Report Preview</h2>
-                    <div id="report-preview" class="small text-muted">Loading report summary...</div>
-                </div>
-            </div>
-
-            {% if frontend_user.role == 'student' %}
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h2 class="h5 mb-3">Enroll in Course</h2>
-                    <form id="student-enroll-form">
-                        <div class="mb-3">
-                            <input class="form-control" type="number" name="course_id" placeholder="Course ID" required>
-                        </div>
-                        <button class="btn btn-outline-primary w-100" type="submit">Enroll</button>
-                    </form>
-                </div>
-            </div>
-            {% endif %}
-        </div>
+    <div class="cms-table-wrap">
+      <table class="cms-table">
+        <thead id="report-table-head"></thead>
+        <tbody id="report-table-body">
+          <tr><td class="cms-td-muted">Loading report…</td></tr>
+        </tbody>
+      </table>
     </div>
-</section>
+  </div>
+  {% endif %}
+
+</div>
 {% endblock %}
 
 {% block scripts %}

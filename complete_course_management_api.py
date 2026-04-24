@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 from functools import wraps
 
 try:
@@ -9,9 +10,10 @@ except ImportError:
         return False
 
 import mysql.connector
-from flask import Flask, flash, g, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, g, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from itsdangerous import BadSignature, BadTimeSignature, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 
 try:
     import redis
@@ -22,6 +24,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("APP_SECRET", "comp3161-secret")
+UPLOAD_ROOT = os.getenv("UPLOAD_ROOT", os.path.join(os.path.dirname(__file__), "uploads"))
 
 ROLE_IDS = {
     "admin": 1,
@@ -141,6 +144,21 @@ def get_json_body():
     return data or {}
 
 
+def save_uploaded_file(file_storage, subfolder):
+    if not file_storage or not file_storage.filename:
+        return None
+    safe_name = secure_filename(file_storage.filename)
+    if not safe_name:
+        return None
+    relative_dir = os.path.join(subfolder)
+    absolute_dir = os.path.join(UPLOAD_ROOT, relative_dir)
+    os.makedirs(absolute_dir, exist_ok=True)
+    unique_name = f"{uuid.uuid4().hex}_{safe_name}"
+    absolute_path = os.path.join(absolute_dir, unique_name)
+    file_storage.save(absolute_path)
+    return os.path.join(relative_dir, unique_name).replace("\\", "/")
+
+
 def require_fields(data, fields):
     missing = [field for field in fields if data.get(field) in (None, "")]
     if missing:
@@ -252,6 +270,54 @@ def api_index():
     return jsonify(index_response())
 
 
+@app.get("/uploads/<path:filename>")
+def uploaded_file(filename):
+    safe_root = os.path.abspath(UPLOAD_ROOT)
+    requested_path = os.path.abspath(os.path.join(safe_root, filename))
+    if not requested_path.startswith(safe_root):
+        abort(404)
+    if not os.path.exists(requested_path):
+        abort(404)
+    return send_from_directory(safe_root, filename, as_attachment=False)
+
+
+@app.get("/uploads-download/<path:filename>")
+def download_uploaded_file(filename):
+    safe_root = os.path.abspath(UPLOAD_ROOT)
+    requested_path = os.path.abspath(os.path.join(safe_root, filename))
+    if not requested_path.startswith(safe_root):
+        abort(404)
+    if not os.path.exists(requested_path):
+        abort(404)
+    return send_from_directory(safe_root, filename, as_attachment=True)
+
+
+@app.post("/files/upload")
+@auth_required("admin", "lecturer", "student")
+def upload_file():
+    uploaded = request.files.get("file")
+    if not uploaded or not uploaded.filename:
+        return api_error("A file is required")
+
+    subfolder = request.form.get("folder", "misc")
+    if subfolder not in {"misc", "submissions", "content"}:
+        subfolder = "misc"
+
+    relative_path = save_uploaded_file(uploaded, subfolder)
+    if not relative_path:
+        return api_error("Unable to save uploaded file", 400)
+
+    file_url = url_for("uploaded_file", filename=relative_path, _external=False)
+    return jsonify(
+        {
+            "message": "File uploaded successfully",
+            "file_reference": relative_path,
+            "file_url": file_url,
+            "original_name": uploaded.filename,
+        }
+    ), 201
+
+
 def is_course_member(cursor, course_id, user_id):
     return is_course_student(cursor, course_id, user_id) or is_course_lecturer(cursor, course_id, user_id)
 
@@ -307,6 +373,55 @@ def frontend_login():
         return redirect(url_for("frontend_dashboard"))
 
     return render_template("login.html")
+
+
+@app.route("/app/register", methods=["GET", "POST"])
+def frontend_register():
+    if request.method == "POST":
+        user_code = request.form.get("user_code", "").strip()
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip() or None
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        role = request.form.get("role", "").strip().lower()
+
+        if role not in {"admin", "lecturer", "student"}:
+            flash("Role must be admin, lecturer, or student.", "danger")
+            return render_template("register.html")
+
+        if not user_code or not full_name or not password:
+            flash("User ID, full name, and password are required.", "danger")
+            return render_template("register.html")
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return render_template("register.html")
+
+        role_id = ROLE_IDS[role]
+        password_hash = generate_password_hash(password)
+
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                """
+                INSERT INTO users (user_code, full_name, email, password_hash, role_id)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (user_code, full_name, email, password_hash, role_id),
+            )
+            conn.commit()
+            flash("Account created successfully. You can now log in.", "success")
+            return redirect(url_for("frontend_login"))
+        except mysql.connector.Error as exc:
+            conn.rollback()
+            flash(str(exc), "danger")
+            return render_template("register.html")
+        finally:
+            cursor.close()
+            conn.close()
+
+    return render_template("register.html")
 
 
 @app.get("/app/logout")
@@ -478,8 +593,23 @@ def get_all_courses():
         conn.close()
 
 
+@app.get("/courses/<int:course_id>")
+@auth_required("admin", "lecturer", "student")
+def get_single_course(course_id):
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        course, error = ensure_course_exists(cursor, course_id)
+        if error:
+            return error
+        return jsonify({"course": course})
+    finally:
+        cursor.close()
+        conn.close()
+
+
 @app.get("/students/<int:student_id>/courses")
-@auth_required("admin", "student")
+@auth_required("admin", "lecturer", "student")
 def get_student_courses(student_id):
     if g.current_user["role"] == "student" and g.current_user["user_id"] != student_id:
         return api_error("Students can only view their own courses", 403)
@@ -723,7 +853,7 @@ def get_course_events(course_id):
 
 
 @app.get("/students/<int:student_id>/events")
-@auth_required("admin", "student")
+@auth_required("admin", "lecturer", "student")
 def get_student_events_for_date(student_id):
     if g.current_user["role"] == "student" and g.current_user["user_id"] != student_id:
         return api_error("Students can only view their own events", 403)
@@ -1012,7 +1142,12 @@ def create_section(course_id):
 @app.post("/sections/<int:section_id>/content")
 @auth_required("admin", "lecturer")
 def add_course_content(section_id):
-    data = get_json_body()
+    if request.content_type and "multipart/form-data" in request.content_type:
+        data = request.form.to_dict()
+        uploaded_file_storage = request.files.get("file")
+    else:
+        data = get_json_body()
+        uploaded_file_storage = None
     validation = require_fields(data, ["title", "content_type"])
     if validation:
         return validation
@@ -1035,6 +1170,10 @@ def add_course_content(section_id):
         if g.current_user["role"] == "lecturer" and not is_course_lecturer(cursor, section["course_id"], g.current_user["user_id"]):
             return api_error("Only the assigned lecturer can add content", 403)
 
+        file_reference = data.get("file_reference")
+        if uploaded_file_storage and uploaded_file_storage.filename:
+            file_reference = save_uploaded_file(uploaded_file_storage, "content")
+
         cursor.execute(
             """
             INSERT INTO course_contents
@@ -1047,13 +1186,92 @@ def add_course_content(section_id):
                 data["title"],
                 content_type,
                 data.get("resource_url"),
-                data.get("file_reference"),
+                file_reference,
                 data.get("description"),
                 g.current_user["user_id"],
             ),
         )
         conn.commit()
-        return jsonify({"message": "Course content added successfully", "content_id": cursor.lastrowid}), 201
+        file_url = url_for("uploaded_file", filename=file_reference, _external=False) if file_reference else None
+        download_url = url_for("download_uploaded_file", filename=file_reference, _external=False) if file_reference else None
+        return jsonify({
+            "message": "Course content added successfully",
+            "content_id": cursor.lastrowid,
+            "file_reference": file_reference,
+            "file_url": file_url,
+            "download_url": download_url,
+        }), 201
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.put("/content/<int:content_id>")
+@auth_required("admin", "lecturer")
+def update_course_content(content_id):
+    if request.content_type and "multipart/form-data" in request.content_type:
+        data = request.form.to_dict()
+        uploaded_file_storage = request.files.get("file")
+    else:
+        data = get_json_body()
+        uploaded_file_storage = None
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        content = fetch_one(
+            cursor,
+            """
+            SELECT content_id, course_id, section_id, title, content_type, resource_url, file_reference, description
+            FROM course_contents
+            WHERE content_id = %s
+            """,
+            (content_id,),
+        )
+        if not content:
+            return api_error("Course content not found", 404)
+
+        if g.current_user["role"] == "lecturer" and not is_course_lecturer(cursor, content["course_id"], g.current_user["user_id"]):
+            return api_error("Only the assigned lecturer can edit course content", 403)
+
+        content_type = str(data.get("content_type", content["content_type"])).strip().lower()
+        if content_type not in {"link", "file", "slide"}:
+            return api_error("content_type must be link, file, or slide")
+
+        file_reference = data.get("file_reference", content["file_reference"])
+        if uploaded_file_storage and uploaded_file_storage.filename:
+            file_reference = save_uploaded_file(uploaded_file_storage, "content")
+
+        cursor.execute(
+            """
+            UPDATE course_contents
+            SET
+                title = %s,
+                content_type = %s,
+                resource_url = %s,
+                file_reference = %s,
+                description = %s
+            WHERE content_id = %s
+            """,
+            (
+                data.get("title", content["title"]),
+                content_type,
+                data.get("resource_url", content["resource_url"]),
+                file_reference,
+                data.get("description", content["description"]),
+                content_id,
+            ),
+        )
+        conn.commit()
+        file_url = url_for("uploaded_file", filename=file_reference, _external=False) if file_reference else None
+        download_url = url_for("download_uploaded_file", filename=file_reference, _external=False) if file_reference else None
+        return jsonify({
+            "message": "Course content updated successfully",
+            "content_id": content_id,
+            "file_reference": file_reference,
+            "file_url": file_url,
+            "download_url": download_url,
+        }), 200
     finally:
         cursor.close()
         conn.close()
@@ -1091,6 +1309,13 @@ def get_course_content(course_id):
             """,
             (course_id,),
         )
+        for item in content:
+            if item.get("file_reference"):
+                item["file_url"] = url_for("uploaded_file", filename=item["file_reference"], _external=False)
+                item["download_url"] = url_for("download_uploaded_file", filename=item["file_reference"], _external=False)
+            else:
+                item["file_url"] = None
+                item["download_url"] = None
         return jsonify({"course_id": course_id, "count": len(content), "content": content})
     finally:
         cursor.close()
@@ -1137,10 +1362,75 @@ def create_assignment(course_id):
         conn.close()
 
 
+@app.get("/courses/<int:course_id>/assignments")
+@auth_required("admin", "lecturer", "student")
+def get_course_assignments(course_id):
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        _, error = ensure_course_exists(cursor, course_id)
+        if error:
+            return error
+
+        query = """
+            SELECT
+                a.assignment_id,
+                a.course_id,
+                a.title,
+                a.description,
+                a.due_datetime,
+                a.max_score,
+                a.created_by,
+                a.created_at
+            FROM assignments a
+            WHERE a.course_id = %s
+            ORDER BY a.due_datetime ASC, a.assignment_id ASC
+        """
+        params = [course_id]
+
+        if g.current_user["role"] == "student":
+            query = """
+                SELECT
+                    a.assignment_id,
+                    a.course_id,
+                    a.title,
+                    a.description,
+                    a.due_datetime,
+                    a.max_score,
+                    a.created_by,
+                    a.created_at,
+                    s.submission_id,
+                    s.submitted_at,
+                    s.submission_url,
+                    ag.score,
+                    ag.feedback,
+                    ag.graded_at
+                FROM assignments a
+                LEFT JOIN assignment_submissions s
+                    ON s.assignment_id = a.assignment_id AND s.student_id = %s
+                LEFT JOIN assignment_grades ag
+                    ON ag.submission_id = s.submission_id
+                WHERE a.course_id = %s
+                ORDER BY a.due_datetime ASC, a.assignment_id ASC
+            """
+            params = [g.current_user["user_id"], course_id]
+
+        assignments = fetch_all(cursor, query, tuple(params))
+        return jsonify({"course_id": course_id, "count": len(assignments), "assignments": assignments})
+    finally:
+        cursor.close()
+        conn.close()
+
+
 @app.post("/assignments/<int:assignment_id>/submissions")
 @auth_required("student")
 def submit_assignment(assignment_id):
-    data = get_json_body()
+    if request.content_type and "multipart/form-data" in request.content_type:
+        data = request.form.to_dict()
+        uploaded_file_storage = request.files.get("file")
+    else:
+        data = get_json_body()
+        uploaded_file_storage = None
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -1155,6 +1445,11 @@ def submit_assignment(assignment_id):
         if not is_course_student(cursor, assignment["course_id"], g.current_user["user_id"]):
             return api_error("Student must be enrolled in the course to submit", 403)
 
+        submission_url = data.get("submission_url")
+        if uploaded_file_storage and uploaded_file_storage.filename:
+            saved_path = save_uploaded_file(uploaded_file_storage, "submissions")
+            submission_url = url_for("uploaded_file", filename=saved_path, _external=False) if saved_path else submission_url
+
         cursor.execute(
             """
             INSERT INTO assignment_submissions (assignment_id, student_id, submission_text, submission_url)
@@ -1164,7 +1459,7 @@ def submit_assignment(assignment_id):
                 assignment_id,
                 g.current_user["user_id"],
                 data.get("submission_text"),
-                data.get("submission_url"),
+                submission_url,
             ),
         )
         conn.commit()
@@ -1173,6 +1468,51 @@ def submit_assignment(assignment_id):
     except mysql.connector.Error as exc:
         conn.rollback()
         return api_error(str(exc), 400)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.get("/assignments/<int:assignment_id>/submissions")
+@auth_required("admin", "lecturer")
+def get_assignment_submissions(assignment_id):
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        assignment = fetch_one(
+            cursor,
+            "SELECT assignment_id, course_id FROM assignments WHERE assignment_id = %s",
+            (assignment_id,),
+        )
+        if not assignment:
+            return api_error("Assignment not found", 404)
+
+        if g.current_user["role"] == "lecturer" and not is_course_lecturer(cursor, assignment["course_id"], g.current_user["user_id"]):
+            return api_error("Only the assigned lecturer can view submissions", 403)
+
+        submissions = fetch_all(
+            cursor,
+            """
+            SELECT
+                s.submission_id,
+                s.student_id,
+                u.full_name,
+                u.user_code,
+                s.submission_text,
+                s.submission_url,
+                s.submitted_at,
+                ag.score,
+                ag.feedback,
+                ag.graded_at
+            FROM assignment_submissions s
+            JOIN users u ON u.user_id = s.student_id
+            LEFT JOIN assignment_grades ag ON ag.submission_id = s.submission_id
+            WHERE s.assignment_id = %s
+            ORDER BY s.submitted_at DESC
+            """,
+            (assignment_id,),
+        )
+        return jsonify({"assignment_id": assignment_id, "count": len(submissions), "submissions": submissions})
     finally:
         cursor.close()
         conn.close()

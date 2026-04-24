@@ -1,107 +1,1500 @@
 {
   "info": {
-    "name": "COMP3161 Complete Course Management API",
-    "_postman_id": "dc2f8d3f-71cb-4f13-8fd1-3e53e0a65224",
-    "description": "Postman collection for the consolidated COMP3161 final project API.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "name": "COMP3161 Course Management API",
+    "description": "Full test suite for the COMP3161 Course Management System. Set the `base_url` variable to your server (e.g. http://127.0.0.1:5000). Tokens are captured automatically after login — run Auth > Login Admin first, then the rest of the collection will work.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "comp3161"
   },
-  "item": [
-    {
-      "name": "Auth - Register",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"user_code\": \"stud900001\",\n  \"full_name\": \"Test Student\",\n  \"email\": \"stud900001@school.edu\",\n  \"password\": \"student123\",\n  \"role\": \"student\"\n}"
-        },
-        "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
-      }
-    },
-    {
-      "name": "Auth - Login",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"user_code\": \"admin001\",\n  \"password\": \"admin123\"\n}"
-        },
-        "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
-      }
-    },
-    {
-      "name": "Courses - Create",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"course_code\": \"COMP3999\",\n  \"course_name\": \"Advanced Database Systems\",\n  \"description\": \"Capstone course\"\n}"
-        },
-        "url": { "raw": "{{base_url}}/courses", "host": ["{{base_url}}"], "path": ["courses"] }
-      }
-    },
-    {
-      "name": "Courses - Get All",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "url": { "raw": "{{base_url}}/courses", "host": ["{{base_url}}"], "path": ["courses"] }
-      }
-    },
-    {
-      "name": "Forums - Create Thread",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"title\": \"Question about Assignment 1\",\n  \"body\": \"Can someone explain the grading rubric?\"\n}"
-        },
-        "url": { "raw": "{{base_url}}/forums/1/threads", "host": ["{{base_url}}"], "path": ["forums", "1", "threads"] }
-      }
-    },
-    {
-      "name": "Assignments - Grade Submission",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"score\": 88,\n  \"feedback\": \"Good work\"\n}"
-        },
-        "url": { "raw": "{{base_url}}/submissions/1/grade", "host": ["{{base_url}}"], "path": ["submissions", "1", "grade"] }
-      }
-    },
-    {
-      "name": "Reports - Top 10 Students",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "url": { "raw": "{{base_url}}/reports/top-10-students", "host": ["{{base_url}}"], "path": ["reports", "top-10-students"] }
-      }
-    }
-  ],
   "variable": [
-    { "key": "base_url", "value": "http://127.0.0.1:5000" },
-    { "key": "token", "value": "" }
+    { "key": "base_url",       "value": "http://127.0.0.1:5000",  "type": "string" },
+    { "key": "admin_token",    "value": "",                        "type": "string" },
+    { "key": "lecturer_token", "value": "",                        "type": "string" },
+    { "key": "student_token",  "value": "",                        "type": "string" },
+    { "key": "course_id",      "value": "1",                       "type": "string" },
+    { "key": "section_id",     "value": "1",                       "type": "string" },
+    { "key": "content_id",     "value": "1",                       "type": "string" },
+    { "key": "assignment_id",  "value": "1",                       "type": "string" },
+    { "key": "submission_id",  "value": "1",                       "type": "string" },
+    { "key": "forum_id",       "value": "1",                       "type": "string" },
+    { "key": "thread_id",      "value": "1",                       "type": "string" },
+    { "key": "student_id",     "value": "3",                       "type": "string" },
+    { "key": "lecturer_id",    "value": "2",                       "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "🔐 Auth",
+      "item": [
+
+        {
+          "name": "Register — Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"ADM001\",\n  \"full_name\": \"Admin User\",\n  \"email\": \"admin@uwi.edu\",\n  \"password\": \"admin123\",\n  \"role\": \"admin\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Has user object', () => pm.expect(pm.response.json()).to.have.property('user'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Register — Lecturer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"LEC001\",\n  \"full_name\": \"Dr. Ricardo Anderson\",\n  \"email\": \"lecturer@uwi.edu\",\n  \"password\": \"lecturer123\",\n  \"role\": \"lecturer\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Register — Student",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"STU001\",\n  \"full_name\": \"Rommonna Wright\",\n  \"email\": \"student@uwi.edu\",\n  \"password\": \"student123\",\n  \"role\": \"student\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Register — Bad Role (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"BAD001\",\n  \"full_name\": \"Bad Actor\",\n  \"password\": \"pass123\",\n  \"role\": \"superuser\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));",
+              "pm.test('Has error', () => pm.expect(pm.response.json()).to.have.property('error'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Login — Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"ADM001\",\n  \"password\": \"admin123\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Has token', () => pm.expect(json).to.have.property('token'));",
+              "pm.collectionVariables.set('admin_token', json.token);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Login — Lecturer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"LEC001\",\n  \"password\": \"lecturer123\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('lecturer_token', json.token);",
+              "pm.collectionVariables.set('lecturer_id', json.user.user_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Login — Student",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"STU001\",\n  \"password\": \"student123\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('student_token', json.token);",
+              "pm.collectionVariables.set('student_id', json.user.user_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Login — Wrong Password (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"ADM001\",\n  \"password\": \"wrongpassword\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 401', () => pm.response.to.have.status(401));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Login — Missing Fields (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"ADM001\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "📚 Courses",
+      "item": [
+
+        {
+          "name": "Create Course (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/courses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_code\": \"COMP3161\",\n  \"course_name\": \"Database Management Systems\",\n  \"description\": \"SQL and relational theory\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.test('Has course', () => pm.expect(json).to.have.property('course'));",
+              "pm.collectionVariables.set('course_id', json.course.course_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Course — Duplicate Code (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/courses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_code\": \"COMP3161\",\n  \"course_name\": \"Duplicate Course\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Course — Student Forbidden (expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/courses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_code\": \"HACK001\",\n  \"course_name\": \"Unauthorized Course\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 403', () => pm.response.to.have.status(403));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get All Courses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has courses array', () => pm.expect(pm.response.json()).to.have.property('courses'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Single Course",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/courses/{{course_id}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has course', () => pm.expect(pm.response.json()).to.have.property('course'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Single Course — Not Found (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/courses/999999"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Course Members",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/courses/{{course_id}}/members"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has members', () => pm.expect(pm.response.json()).to.have.property('members'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Courses for Student",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/students/{{student_id}}/courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has courses', () => pm.expect(pm.response.json()).to.have.property('courses'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Courses for Lecturer",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/lecturers/{{lecturer_id}}/courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Assign Lecturer to Course (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/lecturer",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lecturer_id\": {{lecturer_id}}\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201 or 409', () => {",
+              "  pm.expect([201,409]).to.include(pm.response.code);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Assign Lecturer — Already Assigned (expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/lecturer",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lecturer_id\": {{lecturer_id}}\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 409', () => pm.response.to.have.status(409));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Enroll Student in Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/enroll",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201 or 409', () => {",
+              "  pm.expect([201,409]).to.include(pm.response.code);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Enroll Student — Already Enrolled (expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/enroll",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 409', () => pm.response.to.have.status(409));"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "📅 Calendar Events",
+      "item": [
+
+        {
+          "name": "Create Event (Lecturer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Midterm Exam\",\n  \"description\": \"Covers chapters 1 to 6\",\n  \"start_datetime\": \"2026-03-15 09:00:00\",\n  \"end_datetime\": \"2026-03-15 11:00:00\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Has event_id', () => pm.expect(pm.response.json()).to.have.property('event_id'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Event — Missing Title (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_datetime\": \"2026-03-20 10:00:00\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Event — Student Forbidden (expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Fake Event\",\n  \"start_datetime\": \"2026-04-01 09:00:00\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 403', () => pm.response.to.have.status(403));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Course Events",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/courses/{{course_id}}/events"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has events', () => pm.expect(pm.response.json()).to.have.property('events'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Student Events for Date",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/students/{{student_id}}/events?date=2026-03-15",
+              "query": [{ "key": "date", "value": "2026-03-15" }]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has events', () => pm.expect(pm.response.json()).to.have.property('events'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Student Events — All Dates",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/students/{{student_id}}/events"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "📂 Course Content",
+      "item": [
+
+        {
+          "name": "Create Section (Lecturer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/sections",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Week 1 — Introduction\",\n  \"position_no\": 1\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.test('Has section_id', () => pm.expect(json).to.have.property('section_id'));",
+              "pm.collectionVariables.set('section_id', json.section_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Section — Missing Fields (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/sections",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Incomplete Section\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Add Content — Link",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/sections/{{section_id}}/content",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Week 1 Reference Reading\",\n  \"content_type\": \"link\",\n  \"resource_url\": \"https://dbbook.com\",\n  \"description\": \"Online textbook companion\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('content_id', json.content_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Add Content — Slide",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/sections/{{section_id}}/content",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lecture 1 Slides\",\n  \"content_type\": \"slide\",\n  \"description\": \"Introduction to relational databases\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Add Content — File Upload (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{lecturer_token}}" }],
+            "url": "{{base_url}}/sections/{{section_id}}/content",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title",        "value": "Lab 1 Instructions",  "type": "text" },
+                { "key": "content_type", "value": "file",                "type": "text" },
+                { "key": "description",  "value": "PDF with lab steps",  "type": "text" },
+                { "key": "file",         "type": "file", "src": "" }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Add Content — Bad Type (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/sections/{{section_id}}/content",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bad Content\",\n  \"content_type\": \"video\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Update Content",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/content/{{content_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Week 1 Reference Reading (Updated)\",\n  \"content_type\": \"link\",\n  \"resource_url\": \"https://dbbook.com/updated\",\n  \"description\": \"Updated link\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Update Content — Not Found (expect 404)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/content/999999",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ghost Content\",\n  \"content_type\": \"link\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Course Content",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/courses/{{course_id}}/content"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has content', () => pm.expect(pm.response.json()).to.have.property('content'));"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "📝 Assignments",
+      "item": [
+
+        {
+          "name": "Create Assignment (Lecturer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lab 3: Flask API\",\n  \"description\": \"Build REST endpoints for the CMS database.\",\n  \"due_datetime\": \"2026-03-31 23:59:00\",\n  \"max_score\": 100\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('assignment_id', json.assignment_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Assignment — Missing Due Date (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"No Due Date Assignment\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Assignment — Student Forbidden (expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Student Hack\",\n  \"due_datetime\": \"2026-04-01 23:59:00\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 403', () => pm.response.to.have.status(403));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Course Assignments (Student)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/courses/{{course_id}}/assignments"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has assignments', () => pm.expect(pm.response.json()).to.have.property('assignments'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Course Assignments (Lecturer)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{lecturer_token}}" }],
+            "url": "{{base_url}}/courses/{{course_id}}/assignments"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Submit Assignment (Student)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/assignments/{{assignment_id}}/submissions",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "submission_url",  "value": "https://github.com/student/lab3", "type": "text" },
+                { "key": "submission_text", "value": "Completed all endpoints and tested with Postman.", "type": "text" }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201 or 400', () => {",
+              "  pm.expect([201, 400]).to.include(pm.response.code);",
+              "});",
+              "const json = pm.response.json();",
+              "if (json.submission_id) pm.collectionVariables.set('submission_id', json.submission_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Submit Assignment — File Upload",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/assignments/{{assignment_id}}/submissions",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "submission_text", "value": "Submission with file attached.", "type": "text" },
+                { "key": "file",            "type": "file", "src": "" }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201 or 400', () => {",
+              "  pm.expect([201, 400]).to.include(pm.response.code);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Assignment Submissions (Lecturer)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{lecturer_token}}" }],
+            "url": "{{base_url}}/assignments/{{assignment_id}}/submissions"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has submissions', () => pm.expect(pm.response.json()).to.have.property('submissions'));",
+              "const subs = pm.response.json().submissions;",
+              "if (subs && subs.length) pm.collectionVariables.set('submission_id', subs[0].submission_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Submissions — Student Forbidden (expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/assignments/{{assignment_id}}/submissions"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 403', () => pm.response.to.have.status(403));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Grade Submission (Lecturer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/submissions/{{submission_id}}/grade",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 88,\n  \"feedback\": \"Great work! Clean endpoints and good error handling.\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Grade Submission — Score Exceeds Max (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/submissions/{{submission_id}}/grade",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 9999,\n  \"feedback\": \"Too high!\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Grade Submission — Update (re-grade)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/submissions/{{submission_id}}/grade",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 95,\n  \"feedback\": \"Revised after recheck — excellent submission.\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "💬 Forums & Threads",
+      "item": [
+
+        {
+          "name": "Create Forum (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/forums",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"General Discussion\",\n  \"description\": \"Ask anything about the course\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('forum_id', json.forum_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Forum — Student Forbidden (expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/courses/{{course_id}}/forums",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Unauthorized Forum\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 403', () => pm.response.to.have.status(403));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Course Forums",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/courses/{{course_id}}/forums"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has forums', () => pm.expect(pm.response.json()).to.have.property('forums'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Thread (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/forums/{{forum_id}}/threads",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"When is the midterm?\",\n  \"body\": \"Can someone confirm the midterm date and venue?\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('thread_id', json.thread_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Create Thread — Missing Body (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/forums/{{forum_id}}/threads",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"No body thread\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Forum Threads",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/forums/{{forum_id}}/threads"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has threads', () => pm.expect(pm.response.json()).to.have.property('threads'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Reply to Thread — Top Level (Lecturer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lecturer_token}}" }
+            ],
+            "url": "{{base_url}}/threads/{{thread_id}}/replies",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"The midterm is March 15th, 9am to 11am in room CS201.\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('post_id', json.post_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Reply to Thread — Nested Reply (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/threads/{{thread_id}}/replies",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_post_id\": {{post_id}},\n  \"body\": \"Thanks! Is it open book?\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Reply — Invalid Parent Post (expect 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/threads/{{thread_id}}/replies",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_post_id\": 999999,\n  \"body\": \"Reply to nonexistent post\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Thread Posts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/threads/{{thread_id}}/posts"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has posts', () => pm.expect(pm.response.json()).to.have.property('posts'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Get Thread Posts — Not Found (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/threads/999999/posts"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "📊 Reports (Admin only)",
+      "item": [
+
+        {
+          "name": "Courses with 50+ Students",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/reports/courses-50-plus"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has results', () => pm.expect(pm.response.json()).to.have.property('results'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Courses 50+ — Student Forbidden (expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/reports/courses-50-plus"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 403', () => pm.response.to.have.status(403));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Students Doing 5+ Courses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/reports/students-5-plus"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has results', () => pm.expect(pm.response.json()).to.have.property('results'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Lecturers Teaching 3+ Courses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/reports/lecturers-3-plus"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has results', () => pm.expect(pm.response.json()).to.have.property('results'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Top 10 Most Enrolled Courses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/reports/top-10-courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const results = pm.response.json().results;",
+              "pm.test('Max 10 rows', () => pm.expect(results.length).to.be.at.most(10));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Top 10 Students by Overall Average",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/reports/top-10-students"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const results = pm.response.json().results;",
+              "pm.test('Max 10 rows', () => pm.expect(results.length).to.be.at.most(10));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Reports — No Token (expect 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/reports/top-10-courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 401', () => pm.response.to.have.status(401));"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "🔒 Auth Guard Tests",
+      "item": [
+
+        {
+          "name": "No Token — Get Courses (expect 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 401', () => pm.response.to.have.status(401));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Expired / Invalid Token (expect 401)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer thisisnotavalidtoken" }],
+            "url": "{{base_url}}/courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 401', () => pm.response.to.have.status(401));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Student Cannot Create Course (expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/courses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_code\": \"HACK001\",\n  \"course_name\": \"Unauthorized\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 403', () => pm.response.to.have.status(403));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Student Cannot View Other Student Courses (expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": "{{base_url}}/students/999/courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 403', () => pm.response.to.have.status(403));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "Lecturer Cannot View Other Lecturer Courses (expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{lecturer_token}}" }],
+            "url": "{{base_url}}/lecturers/999/courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 403', () => pm.response.to.have.status(403));"
+            ]}
+          }]
+        }
+
+      ]
+    }
+
   ]
 }
