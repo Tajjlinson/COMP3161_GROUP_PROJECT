@@ -78,40 +78,200 @@
   </div>
   {% endif %}
 
+  <!-- Lecturer: Browse and Assign to Courses (SCROLLABLE + SEARCH) -->
+  {% if frontend_user.role == 'lecturer' %}
+  <div class="cms-card cms-mb">
+    <div class="cms-card-header">
+      <div>
+        <h2 class="cms-card-title">🔍 Browse &amp; Assign to Courses</h2>
+        <p class="cms-muted" style="font-size:12px; margin-top:2px">Browse all courses and assign yourself to teach them (max 5 courses)</p>
+      </div>
+      <div class="cms-search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="browse-courses-search" class="cms-search-input" placeholder="Search courses by code or name...">
+      </div>
+    </div>
+    <div style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r-sm);">
+      <table class="cms-table" style="margin: 0;">
+        <thead style="position: sticky; top: 0; background: var(--surface2); z-index: 1;">
+          <tr>
+            <th>Course Code</th>
+            <th>Course Name</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="browse-courses-table-body">
+          <tr><td colspan="5" class="cms-td-muted">Loading courses…</td</tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+  let allBrowseCourses = [];
+  
+  async function loadBrowseCourses() {
+    const userId = '{{ frontend_user.user_id }}';
+    const tbody = document.getElementById('browse-courses-table-body');
+    
+    try {
+      const coursesRes = await fetch('/courses', {
+        headers: { 'Authorization': `Bearer {{ frontend_user.token }}` }
+      });
+      const coursesData = await coursesRes.json();
+      
+      const myCoursesRes = await fetch(`/lecturers/${userId}/courses`, {
+        headers: { 'Authorization': `Bearer {{ frontend_user.token }}` }
+      });
+      const myCoursesData = await myCoursesRes.json();
+      
+      const myCourseIds = new Set((myCoursesData.courses || []).map(c => c.course_id));
+      const currentCount = myCourseIds.size;
+      const maxCourses = 5;
+      const slotsRemaining = maxCourses - currentCount;
+      
+      if (!coursesData.courses || coursesData.courses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="cms-td-muted">No courses found.</td</tr>';
+        return;
+      }
+      
+      allBrowseCourses = coursesData.courses.map(course => {
+        const isAssigned = myCourseIds.has(course.course_id);
+        let statusHtml = '';
+        let actionHtml = '';
+        
+        if (isAssigned) {
+          statusHtml = '<span class="cms-badge cms-badge-green">✓ Assigned</span>';
+          actionHtml = `<a href="/app/courses/${course.course_id}" class="cms-btn cms-btn-sm cms-btn-ghost">Manage →</a>`;
+        } else if (slotsRemaining > 0) {
+          statusHtml = `<span class="cms-badge cms-badge-amber">Available (${slotsRemaining} slots left)</span>`;
+          actionHtml = `<button class="cms-btn cms-btn-primary cms-btn-sm assign-from-table" data-course-id="${course.course_id}" data-course-code="${escapeHtml(course.course_code)}">+ Assign to Me</button>`;
+        } else {
+          statusHtml = '<span class="cms-badge cms-badge-muted">Max courses reached</span>';
+          actionHtml = '<span class="cms-muted">Cannot assign more</span>';
+        }
+        
+        return {
+          course_id: course.course_id,
+          course_code: course.course_code,
+          course_name: course.course_name,
+          description: course.description || '—',
+          statusHtml: statusHtml,
+          actionHtml: actionHtml,
+          isAssigned: isAssigned
+        };
+      });
+      
+      filterBrowseCourses();
+      
+    } catch (error) {
+      tbody.innerHTML = `<tr><td colspan="5" class="cms-td-muted text-danger">Error: ${error.message}</td</tr>`;
+    }
+  }
+  
+  function filterBrowseCourses() {
+    const searchTerm = document.getElementById('browse-courses-search')?.value.toLowerCase() || '';
+    const filtered = allBrowseCourses.filter(course => 
+      course.course_code.toLowerCase().includes(searchTerm) || 
+      course.course_name.toLowerCase().includes(searchTerm)
+    );
+    
+    const tbody = document.getElementById('browse-courses-table-body');
+    tbody.innerHTML = filtered.map(course => `
+      <tr>
+        <td><strong style="font-family:monospace">${escapeHtml(course.course_code)}</strong></td>
+        <td>${escapeHtml(course.course_name)}</td>
+        <td class="cms-muted" style="font-size:12px">${escapeHtml(course.description)}</td>
+        <td>${course.statusHtml}</td>
+        <td>${course.actionHtml}</td>
+      </table>
+    `).join('');
+    
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="cms-td-muted">No matching courses found.</td</td>';
+    }
+    
+    // Re-attach event listeners
+    document.querySelectorAll('.assign-from-table').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const courseId = btn.dataset.courseId;
+        const courseCode = btn.dataset.courseCode;
+        btn.disabled = true;
+        btn.textContent = 'Assigning...';
+        try {
+          const response = await fetch(`/courses/${courseId}/self-assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer {{ frontend_user.token }}` }
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Failed to assign');
+          alert(`✅ Successfully assigned to ${courseCode}!`);
+          loadBrowseCourses();
+        } catch (error) {
+          alert(error.message);
+          btn.disabled = false;
+          btn.textContent = '+ Assign to Me';
+        }
+      });
+    });
+  }
+  
+  document.getElementById('browse-courses-search')?.addEventListener('input', filterBrowseCourses);
+  loadBrowseCourses();
+  </script>
+  {% endif %}
+  
   <!-- Main grid -->
   <div class="cms-grid-8-4">
 
-    <!-- Courses table -->
-    <div class="cms-card">
-      <div class="cms-card-header">
-        <h2 class="cms-card-title">Courses</h2>
-        <div style="display: flex; gap: 8px;">
-          <span class="cms-badge" id="course-badge">0 loaded</span>
-          <button class="cms-btn cms-btn-ghost cms-btn-sm" id="export-courses-btn" style="display: none;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Export CSV
-          </button>
-        </div>
-      </div>
-      <div class="cms-table-wrap">
-        <table class="cms-table">
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Name</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="courses-table-body">
-            <tr><td colspan="3" class="cms-td-muted">Loading courses…</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <!-- Courses table (SCROLLABLE + SEARCH) -->
+<div class="cms-card">
+  <div class="cms-card-header">
+    <div>
+      <h2 class="cms-card-title">Courses</h2>
+      <p class="cms-muted" style="font-size:12px; margin-top:2px">Manage all courses in the system</p>
     </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <div class="cms-search-box" style="margin-right: 8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="courses-search" class="cms-search-input" placeholder="Search courses...">
+      </div>
+      <span class="cms-badge" id="course-badge">0 loaded</span>
+      <button class="cms-btn cms-btn-ghost cms-btn-sm" id="export-courses-btn" style="display: none;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export CSV
+      </button>
+      {% if frontend_user.role == 'admin' %}
+      <button class="cms-btn cms-btn-primary cms-btn-sm" id="refresh-courses-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Refresh
+      </button>
+      {% endif %}
+    </div>
+  </div>
+  <div style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r-sm);">
+    <table class="cms-table" style="margin: 0;">
+      <thead style="position: sticky; top: 0; background: var(--surface2); z-index: 1;">
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Students</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="courses-table-body">
+        <tr><td colspan="5" class="cms-td-muted">Loading courses…</td</tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
     <!-- Right column -->
     <div class="cms-stack">
@@ -232,7 +392,7 @@
   </div>
   {% endif %}
 
-  <!-- Admin: Reports -->
+  <!-- Admin: Reports (SCROLLABLE + SEARCH) -->
   {% if frontend_user.role == 'admin' %}
   <div class="cms-card cms-mt">
     <div class="cms-card-header">
@@ -241,6 +401,10 @@
         <p class="cms-muted" style="font-size:12px;margin-top:2px">Assignment-required reporting views from the API.</p>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="cms-search-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="reports-search" class="cms-search-input" placeholder="Search reports...">
+        </div>
         <button class="cms-btn cms-btn-primary cms-btn-sm" id="export-all-reports-btn">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -285,11 +449,11 @@
       </div>
     </div>
 
-    <div class="cms-table-wrap">
-      <table class="cms-table">
-        <thead id="report-table-head"></thead>
+    <div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r-sm);">
+      <table class="cms-table" style="margin: 0;">
+        <thead id="report-table-head" style="position: sticky; top: 0; background: var(--surface2); z-index: 1;"></thead>
         <tbody id="report-table-body">
-          <tr><td class="cms-td-muted">Loading report…</td></tr>
+          <tr><td class="cms-td-muted">Loading report…</td</td>
         </tbody>
       </table>
     </div>
@@ -300,5 +464,37 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+<style>
+.cms-search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+}
+.cms-search-box svg {
+  flex-shrink: 0;
+  color: var(--text-3);
+}
+.cms-search-input {
+  border: none;
+  background: transparent;
+  padding: 6px 0;
+  font-size: 12px;
+  width: 180px;
+  outline: none;
+  color: var(--text);
+}
+.cms-search-input::placeholder {
+  color: var(--text-3);
+}
+.cms-search-input:focus {
+  outline: none;
+}
+</style>
 {% endblock %}

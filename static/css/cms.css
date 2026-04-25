@@ -1406,3 +1406,17 @@ ul { list-style: none; padding: 0; margin: 0; }
 /* ── Student submit form ──────────────────────────────────── */
 .asgn-submit-form { display: flex; flex-direction: column; gap: 10px; }
 
+/*Forum thread user code css*/
+.chat-msg-user-code {
+    font-size: 10px;
+    color: var(--text-3);
+    font-family: var(--mono);
+    margin-left: 4px;
+}
+
+.chat-thread-meta {
+    font-size: 10px;
+    color: var(--text-3);
+    margin-top: 2px;
+    margin-bottom: 4px;
+}

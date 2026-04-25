@@ -1,3 +1,28 @@
+-- ============================================================================
+-- COMP3161 Database Schema - Team Contributions
+-- ============================================================================
+-- 
+-- USER MANAGEMENT & AUTHENTICATION (Shaedane)
+--   - users table, roles table
+--
+-- COURSE MANAGEMENT & ENROLLMENT (Tajaun Tomlinson)  
+--   - courses, course_lecturers, course_enrollments
+--
+-- CALENDAR EVENTS (Htut)
+--   - calendar_events
+--
+-- FORUMS & DISCUSSION (Rommona)
+--   - forums, discussion_threads, thread_posts
+--
+-- CONTENT & ASSIGNMENTS (Yashas)
+--   - content_sections, course_contents, assignments, 
+--     assignment_submissions, assignment_grades
+--
+-- INTEGRATION & OPTIMIZATION ([Your Name])
+--   - All indexes, foreign keys, constraints, views
+--
+-- ============================================================================
+
 CREATE DATABASE IF NOT EXISTS comp3161_db;
 USE comp3161_db;
 

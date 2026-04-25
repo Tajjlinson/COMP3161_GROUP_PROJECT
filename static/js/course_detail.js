@@ -47,16 +47,214 @@ function renderMembers() {
         list.innerHTML = `<li class="cms-member-item cms-muted">No members found.</li>`;
         return;
     }
-    list.innerHTML = courseState.members.map((member) => `
-        <li class="cms-member-item">
+    
+    const currentUserRole = window.APP_CONFIG?.role;
+    
+    list.innerHTML = courseState.members.map((member) => {
+        const isStudent = member.role === "student";
+        const isLecturer = member.role === "lecturer";
+        const clickable = (currentUserRole === "lecturer" || currentUserRole === "admin") && isStudent;
+        
+        return `
+        <li class="cms-member-item ${clickable ? 'clickable-member' : ''}" 
+            ${clickable ? `data-user-id="${member.user_id}" data-user-code="${member.user_code}" data-user-name="${escapeHtml(member.full_name)}"` : ''}>
             <div class="cms-member-avatar">${escapeHtml(member.full_name[0] || "?")}</div>
             <div style="flex:1;min-width:0">
                 <div style="font-weight:500;font-size:13px">${escapeHtml(member.full_name)}</div>
                 <div style="font-size:11.5px;color:var(--text-3);font-family:var(--mono)">${escapeHtml(member.user_code)}</div>
+                ${clickable ? `<div style="font-size:10px;color:var(--accent);margin-top:2px">📋 Click to copy User ID: ${member.user_id}</div>` : ''}
             </div>
             <span class="cms-role-badge cms-role-${escapeHtml(member.role)}">${escapeHtml(member.role)}</span>
         </li>
-    `).join("");
+    `}).join("");
+    
+    // Add click handlers for clickable members
+    if (currentUserRole === "lecturer" || currentUserRole === "admin") {
+        document.querySelectorAll('.clickable-member').forEach(el => {
+            el.addEventListener('click', async (e) => {
+                // Don't trigger if clicking on a link or button inside
+                if (e.target.closest('a') || e.target.closest('button')) return;
+                
+                const userId = el.dataset.userId;
+                const userCode = el.dataset.userCode;
+                const userName = el.dataset.userName;
+                
+                // Show a modal/popup with user info
+                showUserInfoModal(userId, userCode, userName);
+            });
+        });
+    }
+}
+
+function showUserInfoModal(userId, userCode, userName) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('userInfoModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'userInfoModal';
+        modal.className = 'cms-modal';
+        modal.innerHTML = `
+            <div class="cms-modal-content">
+                <div class="cms-modal-header">
+                    <h3>Student Information</h3>
+                    <button class="cms-modal-close">&times;</button>
+                </div>
+                <div class="cms-modal-body">
+                    <div class="info-row">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value" id="modal-user-name"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">User Code:</span>
+                        <span class="info-value" id="modal-user-code"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">User ID:</span>
+                        <span class="info-value" id="modal-user-id"></span>
+                        <button class="cms-btn cms-btn-sm cms-btn-ghost copy-id-btn" style="margin-left: 8px;">Copy ID</button>
+                    </div>
+                    <hr>
+                    <p class="cms-hint">Use this ID in the lookup tools below:</p>
+                    <div class="cms-modal-actions">
+                        <button class="cms-btn cms-btn-primary lookup-courses-btn">📚 Lookup Student's Courses</button>
+                        <button class="cms-btn cms-btn-primary lookup-events-btn">📅 Lookup Student's Events</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Add styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .cms-modal {
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.5);
+                justify-content: center;
+                align-items: center;
+            }
+            .cms-modal-content {
+                background: white;
+                border-radius: 12px;
+                width: 400px;
+                max-width: 90%;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            }
+            .cms-modal-header {
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .cms-modal-header h3 {
+                margin: 0;
+                font-size: 18px;
+            }
+            .cms-modal-close {
+                background: none;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                color: var(--text-3);
+            }
+            .cms-modal-body {
+                padding: 20px;
+            }
+            .info-row {
+                display: flex;
+                align-items: center;
+                margin-bottom: 12px;
+                flex-wrap: wrap;
+            }
+            .info-label {
+                width: 80px;
+                font-weight: 600;
+                color: var(--text-2);
+                font-size: 13px;
+            }
+            .info-value {
+                flex: 1;
+                font-family: var(--mono);
+                font-size: 13px;
+            }
+            .cms-modal-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 16px;
+                flex-wrap: wrap;
+            }
+            .clickable-member {
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .clickable-member:hover {
+                background: var(--surface2);
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Close modal when clicking X or outside
+        modal.querySelector('.cms-modal-close').onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+    }
+    
+    // Fill modal data
+    modal.querySelector('#modal-user-name').textContent = userName;
+    modal.querySelector('#modal-user-code').textContent = userCode;
+    modal.querySelector('#modal-user-id').textContent = userId;
+    
+    // Copy ID button
+    modal.querySelector('.copy-id-btn').onclick = () => {
+        navigator.clipboard.writeText(userId);
+        const btn = modal.querySelector('.copy-id-btn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = originalText, 1500);
+    };
+    
+    // Lookup courses button
+    modal.querySelector('.lookup-courses-btn').onclick = () => {
+        modal.style.display = 'none';
+        // Pre-fill the student lookup form
+        const lookupForm = document.getElementById('student-course-lookup-form');
+        if (lookupForm) {
+            lookupForm.student_id.value = userId;
+            lookupForm.dispatchEvent(new Event('submit'));
+            // Scroll to the lookup results
+            document.getElementById('lookup-results')?.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            // If on course detail page, show alert
+            alert(`Student ID: ${userId}\n\nUse this ID in the Course Retrieval Tools on the Dashboard.`);
+        }
+    };
+    
+    // Lookup events button
+    modal.querySelector('.lookup-events-btn').onclick = () => {
+        modal.style.display = 'none';
+        // Pre-fill the events lookup form
+        const eventsForm = document.getElementById('student-events-lookup-form');
+        if (eventsForm) {
+            eventsForm.student_id.value = userId;
+            // Set today's date as default
+            if (!eventsForm.date.value) {
+                eventsForm.date.value = new Date().toISOString().split('T')[0];
+            }
+            eventsForm.dispatchEvent(new Event('submit'));
+            // Scroll to the events results
+            document.getElementById('student-events-results')?.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert(`Student ID: ${userId}\n\nUse this ID in the Student Calendar Lookup on the Dashboard.`);
+        }
+    };
+    
+    modal.style.display = 'flex';
 }
 
 function renderEvents() {
@@ -576,12 +774,15 @@ function renderThreads() {
         courseState.selectedThreadId = courseState.threads[0].thread_id;
     }
 
-    container.innerHTML = courseState.threads.map((thread) => `
+    container.innerHTML = courseState.threads.map((thread) => {
+        const creatorName = thread.creator_name || `User ${thread.created_by}`;
+        return `
         <button class="chat-thread-item ${thread.thread_id === courseState.selectedThreadId ? "active" : ""}" type="button" data-thread-id="${thread.thread_id}">
             <div class="chat-thread-title">${escapeHtml(thread.title)}</div>
+            <div class="chat-thread-meta">Started by ${escapeHtml(creatorName)}</div>
             <div class="chat-thread-preview">${escapeHtml(thread.starter_post || "")}</div>
         </button>
-    `).join("");
+    `}).join("");
 
     const selectedThread = courseState.threads.find((t) => t.thread_id === courseState.selectedThreadId);
     document.getElementById("selected-thread-title").textContent = selectedThread ? selectedThread.title : "Messages";
@@ -590,7 +791,6 @@ function renderThreads() {
     document.querySelectorAll("[data-thread-id]").forEach((button) => {
         button.addEventListener("click", async () => {
             courseState.selectedThreadId = Number(button.dataset.threadId);
-            // clear reply state
             document.getElementById("reply-parent-id").value = "";
             document.getElementById("reply-banner").classList.add("d-none");
             renderThreads();
@@ -625,12 +825,16 @@ function fmtChatTime(value) {
 }
 
 function renderChatBubble(post, isStarter = false) {
-    const initials = `U${post.user_id}`;
+    const displayName = post.full_name || `User ${post.user_id}`;
+    const userCode = post.user_code || '';
+    const avatarInitial = displayName.charAt(0).toUpperCase();
+    
     return `
         <div class="chat-msg-group ${isStarter ? "chat-msg-starter" : ""}" data-post-id="${post.post_id}">
             <div class="chat-msg-header">
-                <div class="chat-msg-avatar">${initials}</div>
-                <span class="chat-msg-author">User ${escapeHtml(String(post.user_id))}</span>
+                <div class="chat-msg-avatar">${escapeHtml(avatarInitial)}</div>
+                <span class="chat-msg-author">${escapeHtml(displayName)}</span>
+                ${userCode ? `<span class="chat-msg-user-code">(${escapeHtml(userCode)})</span>` : ''}
                 <span class="chat-msg-time">${fmtChatTime(post.created_at)}</span>
                 ${isStarter ? `<span class="chat-msg-starter-badge">OP</span>` : ""}
             </div>
@@ -1064,3 +1268,130 @@ function bindForms() {
         });
     }
 })();
+
+// ============================================================================
+// LECTURER SELF-ASSIGN FUNCTIONALITY
+// ============================================================================
+
+async function checkLecturerAssignment() {
+    const role = window.APP_CONFIG?.role;
+    if (role !== 'lecturer') return;
+    
+    const assignBtn = document.getElementById('self-assign-btn');
+    const removeBtn = document.getElementById('self-remove-btn');
+    const statusSpan = document.getElementById('assignment-status');
+    
+    if (!assignBtn || !removeBtn) return;
+    
+    try {
+        const response = await fetch(`/courses/${window.COURSE_ID}/members`);
+        const data = await response.json();
+        
+        const isAssigned = data.members?.some(m => 
+            m.role === 'lecturer' && m.user_id === window.APP_CONFIG.userId
+        );
+        
+        if (isAssigned) {
+            assignBtn.style.display = 'none';
+            removeBtn.style.display = 'inline-flex';
+            statusSpan.innerHTML = '✅ You are currently assigned to this course.';
+            statusSpan.style.color = 'var(--success, #10b981)';
+        } else {
+            // Check if lecturer can add more courses
+            const availableResponse = await fetch(`/lecturers/${window.APP_CONFIG.userId}/available-courses`);
+            const availableData = await availableResponse.json();
+            
+            if (availableData.remaining_slots > 0) {
+                assignBtn.style.display = 'inline-flex';
+                removeBtn.style.display = 'none';
+                statusSpan.innerHTML = `⚠️ You are not assigned to this course. You have ${availableData.remaining_slots} of 5 course slots remaining.`;
+                statusSpan.style.color = 'var(--warning, #f59e0b)';
+            } else {
+                assignBtn.style.display = 'none';
+                removeBtn.style.display = 'none';
+                statusSpan.innerHTML = `❌ You cannot assign yourself to more courses. You have reached the maximum of 5 courses.`;
+                statusSpan.style.color = 'var(--danger, #ef4444)';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking assignment:', error);
+        statusSpan.innerHTML = 'Unable to check assignment status.';
+    }
+}
+
+async function selfAssignToCourse() {
+    const assignBtn = document.getElementById('self-assign-btn');
+    if (assignBtn) assignBtn.disabled = true;
+    
+    try {
+        const response = await fetch(`/courses/${window.COURSE_ID}/self-assign`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${window.APP_CONFIG.token}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to assign');
+        }
+        
+        alert('Successfully assigned to this course!');
+        await loadCourseWorkspace(); // Refresh the page data
+        await checkLecturerAssignment(); // Update button states
+        
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        if (assignBtn) assignBtn.disabled = false;
+    }
+}
+
+async function selfRemoveFromCourse() {
+    const removeBtn = document.getElementById('self-remove-btn');
+    if (removeBtn) removeBtn.disabled = true;
+    
+    if (!confirm('Are you sure you want to remove yourself from this course?')) {
+        if (removeBtn) removeBtn.disabled = false;
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/courses/${window.COURSE_ID}/self-remove`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${window.APP_CONFIG.token}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to remove');
+        }
+        
+        alert('Successfully removed from this course!');
+        await loadCourseWorkspace(); // Refresh the page data
+        await checkLecturerAssignment(); // Update button states
+        
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        if (removeBtn) removeBtn.disabled = false;
+    }
+}
+
+// Add event listeners after DOM loads
+document.addEventListener('DOMContentLoaded', () => {
+    const assignBtn = document.getElementById('self-assign-btn');
+    const removeBtn = document.getElementById('self-remove-btn');
+    
+    if (assignBtn) assignBtn.addEventListener('click', selfAssignToCourse);
+    if (removeBtn) removeBtn.addEventListener('click', selfRemoveFromCourse);
+    
+    // Check assignment status after course loads
+    checkLecturerAssignment();
+});

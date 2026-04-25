@@ -8,6 +8,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/cms.css') }}">
+    <style>
+        :root {
+            --accent: #3b82f6;
+            --text: #1e293b;
+            --text-2: #475569;
+            --text-3: #94a3b8;
+            --border: #e2e8f0;
+            --surface2: #f8fafc;
+            --red: #ef4444;
+            --mono: monospace;
+        }
+        .d-none { display: none !important; }
+        .main-content { min-height: calc(100vh - 72px); background: #f1f5f9; }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -85,6 +99,7 @@
         window.APP_CONFIG = {
             token: "{{ frontend_user.token if frontend_user else '' }}",
             userId: {{ frontend_user.user_id if frontend_user else 'null' }},
+            userCode: "{{ frontend_user.user_code if frontend_user else '' }}",
             role: "{{ frontend_user.role if frontend_user else '' }}"
         };
     </script>
