@@ -18,7 +18,7 @@
 --   - content_sections, course_contents, assignments, 
 --     assignment_submissions, assignment_grades
 --
--- INTEGRATION & OPTIMIZATION ([Your Name])
+-- INTEGRATION & OPTIMIZATION (ALL)
 --   - All indexes, foreign keys, constraints, views
 --
 -- ============================================================================

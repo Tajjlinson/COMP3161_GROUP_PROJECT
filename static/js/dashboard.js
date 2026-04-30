@@ -1,10 +1,11 @@
 // ============================================================================
-// dashboard.js - Complete with Reports + Edit/Delete Modals
+// dashboard.js - Complete with Reports + Edit/Delete Modals + Scrollable Tables
 // ============================================================================
 
 let allCoursesData = [];
 let currentLecturerData = [];
 let currentStudentData = [];
+let currentReportKey = "courses-50-plus";
 
 // ============================================================================
 // REPORT CONFIGURATIONS
@@ -28,7 +29,7 @@ const reportConfig = {
         endpoint: "/reports/students-5-plus",
         columns: [
             { key: "user_id", label: "Student ID" },
-            { key: "user_code", label: "User Code" },
+            { key: "user_code", label: "User ID" },
             { key: "full_name", label: "Full Name" },
             { key: "course_count", label: "Course Count" }
         ]
@@ -39,7 +40,7 @@ const reportConfig = {
         endpoint: "/reports/lecturers-3-plus",
         columns: [
             { key: "user_id", label: "Lecturer ID" },
-            { key: "user_code", label: "User Code" },
+            { key: "user_code", label: "User ID" },
             { key: "full_name", label: "Full Name" },
             { key: "course_count", label: "Course Count" }
         ]
@@ -61,7 +62,7 @@ const reportConfig = {
         endpoint: "/reports/top-10-students",
         columns: [
             { key: "user_id", label: "Student ID" },
-            { key: "user_code", label: "User Code" },
+            { key: "user_code", label: "User ID" },
             { key: "full_name", label: "Full Name" },
             { key: "overall_average", label: "Overall Average" }
         ]
@@ -180,7 +181,7 @@ function renderCourses(courses) {
     if (badge) badge.textContent = `${courses.length} loaded`;
 
     if (!courses.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="cms-td-muted">No courses found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="cms-td-muted">No courses found</td></tr>`;
         return;
     }
 
@@ -208,8 +209,8 @@ function renderCourses(courses) {
                     title="Delete Course">🗑️</button>
               ` : ''}
             </div>
-           </td>
-         </tr>
+          </td>
+        </tr>
         `;
     }).join("");
     
@@ -337,7 +338,154 @@ async function confirmDeleteCourse(courseId, courseCode) {
 }
 
 // ============================================================================
-// LOAD COURSES - SUPER FAST (Single API call)
+// LOOKUP FUNCTIONS WITH SCROLLABLE RESULTS
+// ============================================================================
+
+async function performStudentCourseLookup(studentIdentifier) {
+    const resultsDiv = document.getElementById('lookup-results');
+    if (!resultsDiv) return;
+    
+    try {
+        const response = await fetch(`/students/${encodeURIComponent(studentIdentifier)}/courses`, {
+            headers: { 'Authorization': `Bearer ${window.APP_CONFIG.token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Lookup failed');
+        const courses = data.courses || [];
+        
+        if (courses.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-3);">No courses found for this student.</div>';
+            return;
+        }
+        
+        // Create scrollable table
+        resultsDiv.innerHTML = `
+            <div class="scrollable-table-container" style="max-height: 300px;">
+                <table class="cms-table" style="margin: 0;">
+                    <thead>
+                        <tr>
+                            <th>Course ID</th>
+                            <th>Course Code</th>
+                            <th>Course Name</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${courses.map(course => `
+                            <tr>
+                                <td>${course.course_id}</td>
+                                <td><strong>${escapeHtml(course.course_code)}</strong></td>
+                                <td>${escapeHtml(course.course_name)}</td>
+                                <td><span class="cms-badge cms-badge-blue">Enrolled</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        resultsDiv.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--red);">Error: ${error.message}</div>`;
+    }
+}
+
+async function performLecturerCourseLookup(lecturerIdentifier) {
+    const resultsDiv = document.getElementById('lookup-results');
+    if (!resultsDiv) return;
+    
+    try {
+        const response = await fetch(`/lecturers/${encodeURIComponent(lecturerIdentifier)}/courses`, {
+            headers: { 'Authorization': `Bearer ${window.APP_CONFIG.token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Lookup failed');
+        const courses = data.courses || [];
+        
+        if (courses.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-3);">No courses found for this lecturer.</div>';
+            return;
+        }
+        
+        // Create scrollable table
+        resultsDiv.innerHTML = `
+            <div class="scrollable-table-container" style="max-height: 300px;">
+                <table class="cms-table" style="margin: 0;">
+                    <thead>
+                        <tr>
+                            <th>Course ID</th>
+                            <th>Course Code</th>
+                            <th>Course Name</th>
+                            <th>Students</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${courses.map(course => `
+                            <tr>
+                                <td>${course.course_id}</td>
+                                <td><strong>${escapeHtml(course.course_code)}</strong></td>
+                                <td>${escapeHtml(course.course_name)}</td>
+                                <td>${course.student_count || 0}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        resultsDiv.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--red);">Error: ${error.message}</div>`;
+    }
+}
+
+async function performStudentEventsLookup(studentIdentifier, date) {
+    const resultsDiv = document.getElementById('student-events-results');
+    if (!resultsDiv) return;
+    
+    try {
+        const response = await fetch(`/students/${encodeURIComponent(studentIdentifier)}/events?date=${encodeURIComponent(date)}`, {
+            headers: { 'Authorization': `Bearer ${window.APP_CONFIG.token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Lookup failed');
+        const events = data.events || [];
+        
+        if (events.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-3);">No events found for this student on this date.</div>';
+            return;
+        }
+        
+        // Create scrollable table
+        resultsDiv.innerHTML = `
+            <div class="scrollable-table-container" style="max-height: 300px;">
+                <table class="cms-table" style="margin: 0;">
+                    <thead>
+                        <tr>
+                            <th>Event ID</th>
+                            <th>Title</th>
+                            <th>Course</th>
+                            <th>Type</th>
+                            <th>Date/Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${events.map(event => `
+                            <tr>
+                                <td>${event.event_id}</td>
+                                <td>${escapeHtml(event.title)}</td>
+                                <td>${escapeHtml(event.course_name || 'N/A')}</td>
+                                <td><span class="cms-badge">${escapeHtml(event.event_type || 'General')}</span></td>
+                                <td>${new Date(event.event_datetime).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        resultsDiv.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--red);">Error: ${error.message}</div>`;
+    }
+}
+
+// ============================================================================
+// LOAD COURSES
 // ============================================================================
 
 async function loadCourses() {
@@ -355,8 +503,6 @@ async function loadCourses() {
         const payload = await apiRequest(endpoint);
         const courses = payload.courses || [];
         
-        // Student counts are ALREADY in the data for admin (from SQL)
-        // No extra API calls needed!
         renderCourses(courses);
         
     } catch (error) {
@@ -369,7 +515,7 @@ async function loadCourses() {
 }
 
 // ============================================================================
-// REPORT FUNCTIONS
+// REPORT FUNCTIONS WITH SCROLLABLE TABLES
 // ============================================================================
 
 async function loadReportPreview() {
@@ -397,8 +543,17 @@ async function loadReportPreview() {
 async function loadReport(reportKey) {
     const config = reportConfig[reportKey];
     if (!config) return;
-    const payload = await apiRequest(config.endpoint);
-    renderReportTable(reportKey, payload.results || []);
+    const body = document.getElementById("report-table-body");
+
+    try {
+        const payload = await apiRequest(config.endpoint);
+        renderReportTable(reportKey, payload.results || []);
+    } catch (error) {
+        window.currentReportData = [];
+        if (body) {
+            body.innerHTML = `<tr><td colspan="${config.columns.length}" class="cms-td-muted">Error: ${escapeHtml(error.message)}</td></tr>`;
+        }
+    }
 }
 
 function renderReportTable(reportKey, rows) {
@@ -415,10 +570,68 @@ function renderReportTable(reportKey, rows) {
     if (description) description.textContent = config.description;
     if (badge) badge.textContent = `${rows.length} rows`;
     
+    currentReportKey = reportKey;
     window.currentReportData = rows;
 
     head.innerHTML = `<tr>${config.columns.map(col => `<th>${escapeHtml(col.label)}</th>`).join("")}</tr>`;
     body.innerHTML = rows.length ? rows.map(row => `<tr>${config.columns.map(col => `<td>${escapeHtml(row[col.key] ?? "")}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${config.columns.length}" class="cms-td-muted">No data</td></tr>`;
+}
+
+function csvEscape(value) {
+    const text = String(value ?? "");
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function slugifyFilePart(value) {
+    return String(value || "report")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "report";
+}
+
+function rowsToCsv(columns, rows) {
+    const header = columns.map(col => csvEscape(col.label)).join(",");
+    const body = rows.map(row => columns.map(col => csvEscape(row[col.key])).join(","));
+    return [header, ...body].join("\r\n");
+}
+
+function downloadCsv(filename, csvText) {
+    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
+function downloadCurrentReport() {
+    const config = reportConfig[currentReportKey];
+    const rows = window.currentReportData || [];
+
+    if (!config) return;
+    if (!rows.length) {
+        alert("No report rows to download.");
+        return;
+    }
+
+    downloadCsv(`${slugifyFilePart(config.title)}.csv`, rowsToCsv(config.columns, rows));
+}
+
+async function downloadAllReports() {
+    const sections = [];
+
+    for (const [reportKey, config] of Object.entries(reportConfig)) {
+        const payload = await apiRequest(config.endpoint);
+        const rows = payload.results || [];
+        sections.push(csvEscape(config.title));
+        sections.push(rowsToCsv(config.columns, rows));
+        sections.push("");
+    }
+
+    downloadCsv("all-admin-reports.csv", sections.join("\r\n"));
 }
 
 async function loadLecturerReport(reportKey) {
@@ -514,6 +727,46 @@ function bindStudentReportTabs() {
 }
 
 // ============================================================================
+// LOOKUP FORM HANDLERS
+// ============================================================================
+
+function bindLookupHandlers() {
+    // Student course lookup
+    const studentLookupForm = document.getElementById('student-course-lookup-form');
+    if (studentLookupForm) {
+        studentLookupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const studentIdentifier = e.target.querySelector('input[name="student_id"]').value.trim();
+            if (studentIdentifier) await performStudentCourseLookup(studentIdentifier);
+        });
+    }
+    
+    // Lecturer course lookup
+    const lecturerLookupForm = document.getElementById('lecturer-course-lookup-form');
+    if (lecturerLookupForm) {
+        lecturerLookupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const lecturerIdentifier = e.target.querySelector('input[name="lecturer_id"]').value.trim();
+            if (lecturerIdentifier) await performLecturerCourseLookup(lecturerIdentifier);
+        });
+    }
+    
+    // Student events lookup
+    const eventsLookupForm = document.getElementById('student-events-lookup-form');
+    if (eventsLookupForm) {
+        eventsLookupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const studentId = e.target.querySelector('input[name="student_id"]').value.trim();
+            const date = e.target.querySelector('input[name="date"]').value;
+            if (studentId && date) await performStudentEventsLookup(studentId, date);
+        });
+    }
+}
+
+// ============================================================================
 // FORM HANDLERS
 // ============================================================================
 
@@ -532,22 +785,133 @@ function bindFormHandlers() {
         const filtered = allCoursesData.filter(c => c.course_code.toLowerCase().includes(term) || c.course_name.toLowerCase().includes(term));
         if (window.APP_CONFIG?.role === "admin") renderCourses(filtered);
     });
+
+    document.getElementById("download-report-btn")?.addEventListener("click", downloadCurrentReport);
+    document.getElementById("download-table-btn")?.addEventListener("click", downloadCurrentReport);
+    document.getElementById("export-all-reports-btn")?.addEventListener("click", async () => {
+        try {
+            await downloadAllReports();
+        } catch (error) {
+            alert(`Unable to download reports: ${error.message}`);
+        }
+    });
 }
 
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
 
-// Add modal styles
+// Add modal and scrollable table styles
 if (!document.getElementById('modal-styles')) {
     const style = document.createElement('style');
     style.id = 'modal-styles';
-    style.textContent = `.cms-modal{display:flex;position:fixed;z-index:10000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center}.cms-modal-content{background:#fff;border-radius:12px;animation:modalFadeIn 0.2s}@keyframes modalFadeIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}`;
+    style.textContent = `
+        .cms-modal {
+            display: flex;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .cms-modal-content {
+            background: #fff;
+            border-radius: 12px;
+            animation: modalFadeIn 0.2s;
+        }
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Scrollable Table Styles */
+        .scrollable-table-container {
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid var(--border, #e5e7eb);
+            border-radius: 8px;
+            position: relative;
+        }
+        
+        .scrollable-table-container table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .scrollable-table-container thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--surface2, #f9fafb);
+        }
+        
+        .scrollable-table-container thead th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border, #e5e7eb);
+            background: inherit;
+            white-space: nowrap;
+        }
+        
+        .scrollable-table-container tbody td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border-light, #f3f4f6);
+            white-space: nowrap;
+        }
+        
+        .scrollable-table-container tbody tr:hover {
+            background: var(--bg-hover, #f9fafb);
+        }
+        
+        /* Custom scrollbar */
+        .scrollable-table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .scrollable-table-container::-webkit-scrollbar-track {
+            background: var(--border-light, #f1f1f1);
+            border-radius: 4px;
+        }
+        
+        .scrollable-table-container::-webkit-scrollbar-thumb {
+            background: var(--border, #c1c1c1);
+            border-radius: 4px;
+        }
+        
+        .scrollable-table-container::-webkit-scrollbar-thumb:hover {
+            background: var(--accent, #888);
+        }
+        
+        .cms-td-muted {
+            text-align: center;
+            color: #6b7280;
+            padding: 32px !important;
+        }
+        
+        .cms-badge-blue {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+    `;
     document.head.appendChild(style);
 }
 
 (async function initDashboard() {
     bindFormHandlers();
+    bindLookupHandlers();
     bindReportTabs();
     bindLecturerReportTabs();
     bindStudentReportTabs();

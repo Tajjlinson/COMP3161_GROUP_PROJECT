@@ -110,6 +110,28 @@ def inject_frontend_session():
     return {"frontend_user": session.get("frontend_user")}
 
 
+def resolve_user_identifier(cursor, identifier, role_id):
+    """Resolve either internal user_id or public user_code for a specific role."""
+    identifier_text = str(identifier).strip()
+    if not identifier_text:
+        return None
+
+    if identifier_text.isdigit():
+        user = fetch_one(
+            cursor,
+            "SELECT user_id, user_code, full_name FROM users WHERE user_id = %s AND role_id = %s",
+            (int(identifier_text), role_id),
+        )
+        if user:
+            return user
+
+    return fetch_one(
+        cursor,
+        "SELECT user_id, user_code, full_name FROM users WHERE user_code = %s AND role_id = %s",
+        (identifier_text, role_id),
+    )
+
+
 @app.get("/")
 def index():
     return redirect(url_for("frontend_home"))
@@ -433,19 +455,24 @@ def create_new_course():
         conn.close()
 
 
-@app.get("/students/<int:student_id>/courses")
-def get_student_courses(student_id):
+@app.get("/students/<student_identifier>/courses")
+def get_student_courses(student_identifier):
     """Get all courses for a student - Tajaun's student course view"""
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
-    
-    if current_user["role"] == "student" and current_user["user_id"] != student_id:
-        return api_error("Students can only view their own courses", 403)
-    
+
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
+        student = resolve_user_identifier(cursor, student_identifier, 3)
+        if not student:
+            return api_error("Student not found. Use the Student ID or User ID.", 404)
+
+        student_id = student["user_id"]
+        if current_user["role"] == "student" and current_user["user_id"] != student_id:
+            return api_error("Students can only view their own courses", 403)
+
         courses = fetch_all(
             cursor,
             """SELECT c.course_id, c.course_code, c.course_name, c.description
@@ -455,25 +482,36 @@ def get_student_courses(student_id):
                ORDER BY c.course_code""",
             (student_id,),
         )
-        return jsonify({"student_id": student_id, "count": len(courses), "courses": courses})
+        return jsonify({
+            "student_id": student_id,
+            "student_code": student["user_code"],
+            "student_name": student["full_name"],
+            "count": len(courses),
+            "courses": courses,
+        })
     finally:
         cursor.close()
         conn.close()
 
 
-@app.get("/lecturers/<int:lecturer_id>/courses")
-def get_lecturer_courses(lecturer_id):
+@app.get("/lecturers/<lecturer_identifier>/courses")
+def get_lecturer_courses(lecturer_identifier):
     """Get all courses taught by a lecturer - Tajaun's lecturer course view"""
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
-    
-    if current_user["role"] == "lecturer" and current_user["user_id"] != lecturer_id:
-        return api_error("Lecturers can only view their own courses", 403)
-    
+
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
+        lecturer = resolve_user_identifier(cursor, lecturer_identifier, 2)
+        if not lecturer:
+            return api_error("Lecturer not found. Use the Lecturer ID or User ID.", 404)
+
+        lecturer_id = lecturer["user_id"]
+        if current_user["role"] == "lecturer" and current_user["user_id"] != lecturer_id:
+            return api_error("Lecturers can only view their own courses", 403)
+
         courses = fetch_all(
             cursor,
             """SELECT c.course_id, c.course_code, c.course_name, c.description
@@ -483,7 +521,13 @@ def get_lecturer_courses(lecturer_id):
                ORDER BY c.course_code""",
             (lecturer_id,),
         )
-        return jsonify({"lecturer_id": lecturer_id, "count": len(courses), "courses": courses})
+        return jsonify({
+            "lecturer_id": lecturer_id,
+            "lecturer_code": lecturer["user_code"],
+            "lecturer_name": lecturer["full_name"],
+            "count": len(courses),
+            "courses": courses,
+        })
     finally:
         cursor.close()
         conn.close()
@@ -686,8 +730,8 @@ def create_calendar_event(course_id):
         conn.close()
 
 
-@app.get("/students/<int:student_id>/events")
-def get_student_events_api(student_id):
+@app.get("/students/<student_identifier>/events")
+def get_student_events_api(student_identifier):
     """Get events for a student with optional date filter - Htut's student calendar"""
     current_user = require_session()
     if not current_user:
@@ -697,6 +741,14 @@ def get_student_events_api(student_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
+        student = resolve_user_identifier(cursor, student_identifier, 3)
+        if not student:
+            return api_error("Student not found. Use the Student ID or User ID.", 404)
+
+        student_id = student["user_id"]
+        if current_user["role"] == "student" and current_user["user_id"] != student_id:
+            return api_error("Students can only view their own events", 403)
+
         query = """SELECT ce.event_id, ce.course_id, c.course_code, c.course_name, ce.title, ce.description, ce.start_datetime, ce.end_datetime
                    FROM calendar_events ce
                    JOIN courses c ON c.course_id = ce.course_id
@@ -717,7 +769,14 @@ def get_student_events_api(student_id):
             if event.get('end_datetime'):
                 event['end_datetime'] = str(event['end_datetime'])
         
-        return jsonify({"student_id": student_id, "date": date_value, "count": len(events), "events": events})
+        return jsonify({
+            "student_id": student_id,
+            "student_code": student["user_code"],
+            "student_name": student["full_name"],
+            "date": date_value,
+            "count": len(events),
+            "events": events,
+        })
     finally:
         cursor.close()
         conn.close()
@@ -1284,7 +1343,7 @@ def report_courses_50_plus():
             """SELECT c.course_id, c.course_code, c.course_name, COUNT(ce.student_id) as student_count
                FROM courses c
                JOIN course_enrollments ce ON ce.course_id = c.course_id
-               GROUP BY c.course_id
+               GROUP BY c.course_id, c.course_code, c.course_name
                HAVING COUNT(ce.student_id) >= 50"""
         )
         return jsonify({"results": results})
@@ -1309,7 +1368,7 @@ def report_students_5_plus():
                FROM users u
                JOIN course_enrollments ce ON ce.student_id = u.user_id
                WHERE u.role_id = 3
-               GROUP BY u.user_id
+               GROUP BY u.user_id, u.user_code, u.full_name
                HAVING COUNT(ce.course_id) >= 5"""
         )
         return jsonify({"results": results})
@@ -1334,7 +1393,7 @@ def report_lecturers_3_plus():
                FROM users u
                JOIN course_lecturers cl ON cl.lecturer_id = u.user_id
                WHERE u.role_id = 2
-               GROUP BY u.user_id
+               GROUP BY u.user_id, u.user_code, u.full_name
                HAVING COUNT(cl.course_id) >= 3"""
         )
         return jsonify({"results": results})
@@ -1358,7 +1417,7 @@ def report_top_10_courses():
             """SELECT c.course_id, c.course_code, c.course_name, COUNT(ce.student_id) as student_count
                FROM courses c
                LEFT JOIN course_enrollments ce ON ce.course_id = c.course_id
-               GROUP BY c.course_id
+               GROUP BY c.course_id, c.course_code, c.course_name
                ORDER BY student_count DESC
                LIMIT 10"""
         )
@@ -1387,7 +1446,7 @@ def report_top_10_students():
                JOIN assignment_grades ag ON ag.submission_id = s.submission_id
                JOIN assignments a ON a.assignment_id = s.assignment_id
                WHERE u.role_id = 3
-               GROUP BY u.user_id
+               GROUP BY u.user_id, u.user_code, u.full_name
                ORDER BY overall_average DESC
                LIMIT 10"""
         )

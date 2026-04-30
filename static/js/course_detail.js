@@ -62,7 +62,7 @@ function renderMembers() {
             <div style="flex:1;min-width:0">
                 <div style="font-weight:500;font-size:13px">${escapeHtml(member.full_name)}</div>
                 <div style="font-size:11.5px;color:var(--text-3);font-family:var(--mono)">${escapeHtml(member.user_code)}</div>
-                ${clickable ? `<div style="font-size:10px;color:var(--accent);margin-top:2px">📋 Click to copy User ID: ${member.user_id}</div>` : ''}
+                ${clickable ? `<div style="font-size:10px;color:var(--accent);margin-top:2px">Click for Student ID: ${member.user_id}</div>` : ''}
             </div>
             <span class="cms-role-badge cms-role-${escapeHtml(member.role)}">${escapeHtml(member.role)}</span>
         </li>
@@ -105,16 +105,16 @@ function showUserInfoModal(userId, userCode, userName) {
                         <span class="info-value" id="modal-user-name"></span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">User Code:</span>
+                        <span class="info-label">User ID:</span>
                         <span class="info-value" id="modal-user-code"></span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">User ID:</span>
+                        <span class="info-label">Student ID:</span>
                         <span class="info-value" id="modal-user-id"></span>
                         <button class="cms-btn cms-btn-sm cms-btn-ghost copy-id-btn" style="margin-left: 8px;">Copy ID</button>
                     </div>
                     <hr>
-                    <p class="cms-hint">Use this ID in the lookup tools below:</p>
+                    <p class="cms-hint">Lookup tools accept either the Student ID or User ID.</p>
                     <div class="cms-modal-actions">
                         <button class="cms-btn cms-btn-primary lookup-courses-btn">📚 Lookup Student's Courses</button>
                         <button class="cms-btn cms-btn-primary lookup-events-btn">📅 Lookup Student's Events</button>
@@ -210,7 +210,7 @@ function showUserInfoModal(userId, userCode, userName) {
     modal.querySelector('#modal-user-code').textContent = userCode;
     modal.querySelector('#modal-user-id').textContent = userId;
     
-    // Copy ID button
+    // Copy Student ID button
     modal.querySelector('.copy-id-btn').onclick = () => {
         navigator.clipboard.writeText(userId);
         const btn = modal.querySelector('.copy-id-btn');
@@ -231,7 +231,7 @@ function showUserInfoModal(userId, userCode, userName) {
             document.getElementById('lookup-results')?.scrollIntoView({ behavior: 'smooth' });
         } else {
             // If on course detail page, show alert
-            alert(`Student ID: ${userId}\n\nUse this ID in the Course Retrieval Tools on the Dashboard.`);
+            alert(`Student ID: ${userId}\nUser ID: ${userCode}\n\nLookup tools accept either value.`);
         }
     };
     
@@ -250,7 +250,7 @@ function showUserInfoModal(userId, userCode, userName) {
             // Scroll to the events results
             document.getElementById('student-events-results')?.scrollIntoView({ behavior: 'smooth' });
         } else {
-            alert(`Student ID: ${userId}\n\nUse this ID in the Student Calendar Lookup on the Dashboard.`);
+            alert(`Student ID: ${userId}\nUser ID: ${userCode}\n\nLookup tools accept either value.`);
         }
     };
     
