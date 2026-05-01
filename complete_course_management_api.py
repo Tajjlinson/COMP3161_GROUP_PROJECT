@@ -46,10 +46,11 @@ def get_db():
         host=os.getenv("DB_HOST", "localhost"),
         port=int(os.getenv("DB_PORT", "3306")),
         user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", "Bz2pfzwzqnk3"),
+        password=os.getenv("DB_PASSWORD", ""),
         database=os.getenv("DB_NAME", "comp3161_db"),
+        ssl_verify_cert=False,
+        ssl_verify_identity=False,
     )
-
 
 def fetch_one(cursor, query, params=()):
     cursor.execute(query, params)
