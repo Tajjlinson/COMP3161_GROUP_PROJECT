@@ -461,7 +461,7 @@ async function performStudentEventsLookup(studentIdentifier, date) {
                             <th>Event ID</th>
                             <th>Title</th>
                             <th>Course</th>
-                            <th>Type</th>
+                            <th>Description</th>
                             <th>Date/Time</th>
                         </tr>
                     </thead>
@@ -470,9 +470,9 @@ async function performStudentEventsLookup(studentIdentifier, date) {
                             <tr>
                                 <td>${event.event_id}</td>
                                 <td>${escapeHtml(event.title)}</td>
-                                <td>${escapeHtml(event.course_name || 'N/A')}</td>
-                                <td><span class="cms-badge">${escapeHtml(event.event_type || 'General')}</span></td>
-                                <td>${new Date(event.event_datetime).toLocaleString()}</td>
+                                <td>${escapeHtml(event.course_code ? `${event.course_code} — ${event.course_name}` : (event.course_name || 'N/A'))}</td>
+                                <td><span class="cms-badge">${escapeHtml(event.description || 'General')}</span></td>
+                                <td>${event.start_datetime ? new Date(event.start_datetime).toLocaleString() : 'No date'}${event.end_datetime ? ` → ${new Date(event.end_datetime).toLocaleString()}` : ''}</td>
                             </tr>
                         `).join('')}
                     </tbody>

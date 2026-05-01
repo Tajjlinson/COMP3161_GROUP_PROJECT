@@ -58,12 +58,12 @@ def get_connection_pool():
 
         _pool = pooling.MySQLConnectionPool(
             pool_name="trackademia_pool",
-            pool_size=3,          # keep low — Aiven free tier caps at ~5
+            pool_size=5,          # keep low Aiven free tier caps at ~5
             pool_reset_session=True,
             host=os.getenv("DB_HOST", "localhost"),
             port=int(os.getenv("DB_PORT", "3306")),
             user=os.getenv("DB_USER", "root"),
-            password=os.getenv("DB_PASSWORD", ""),
+            password=os.getenv("DB_PASSWORD", "Bz2pfzwzqnk3"),
             database=os.getenv("DB_NAME", "comp3161_db"),
             connection_timeout=10,
             **ssl_args
