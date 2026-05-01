@@ -29,6 +29,7 @@ except ImportError:
     pass
 
 import mysql.connector
+from mysql.connector import pooling
 
 app = Flask(__name__)
 app.secret_key = os.getenv("APP_SECRET", "comp3161-secret")
@@ -41,16 +42,36 @@ ROLE_IDS = {"admin": 1, "lecturer": 2, "student": 3}
 # DATABASE UTILITIES - Integrated by [Your Name]
 # ============================================================================
 
+
+_pool = None
+
+def get_connection_pool():
+    global _pool
+    if _pool is None:
+        ca_path = os.path.join(os.path.dirname(__file__), "ca.pem")
+        ssl_args = {
+            "ssl_verify_cert": False,
+            "ssl_verify_identity": False,
+        }
+        if os.path.exists(ca_path):
+            ssl_args["ssl_ca"] = ca_path
+
+        _pool = pooling.MySQLConnectionPool(
+            pool_name="trackademia_pool",
+            pool_size=3,          # keep low — Aiven free tier caps at ~5
+            pool_reset_session=True,
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", "3306")),
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
+            database=os.getenv("DB_NAME", "comp3161_db"),
+            connection_timeout=10,
+            **ssl_args
+        )
+    return _pool
+
 def get_db():
-    return mysql.connector.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", "3306")),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
-        database=os.getenv("DB_NAME", "comp3161_db"),
-        ssl_verify_cert=False,
-        ssl_verify_identity=False,
-    )
+    return get_connection_pool().get_connection()
 
 def fetch_one(cursor, query, params=()):
     cursor.execute(query, params)
