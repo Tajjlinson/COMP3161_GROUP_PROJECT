@@ -1,4 +1,4 @@
-// course_detail.js — unchanged logic; only tab switching updated for new CSS class names
+// course_detail.js - JavaScript for course detail page, handling members, events, content, and assignments
 
 const courseState = {
     course: null,
@@ -1013,6 +1013,8 @@ async function loadAssignmentSubmissions() {
 }
 
 async function loadCourseWorkspace() {
+    loadedTabs.clear(); // reset so tabs re-fetch after a manual refresh
+    
     const [coursePayload, membersPayload, eventsPayload, forumsPayload, contentPayload, assignmentsPayload] = await Promise.all([
         apiRequest(`/courses/${window.COURSE_ID}`),
         apiRequest(`/courses/${window.COURSE_ID}/members`),
@@ -1041,17 +1043,26 @@ async function loadCourseWorkspace() {
     renderForums();
     renderSectionsSelect();
     updateCounters();
-    await loadThreads();
-    await loadAssignmentSubmissions();
+    await Promise.all([loadThreads(), loadAssignmentSubmissions()]);
 }
+
+const loadedTabs = new Set();
 
 function bindTabs() {
     document.querySelectorAll("#workspace-tabs .cms-tab").forEach((button) => {
-        button.addEventListener("click", () => {
+        button.addEventListener("click", async () => {
             document.querySelectorAll("#workspace-tabs .cms-tab").forEach((b) => b.classList.remove("cms-tab-active"));
             document.querySelectorAll(".cms-panel").forEach((p) => p.classList.remove("cms-panel-active"));
             button.classList.add("cms-tab-active");
             document.getElementById(button.dataset.panel).classList.add("cms-panel-active");
+
+            const panel = button.dataset.panel;
+            // Only fetch tab-specific data if not yet loaded this session
+            if (!loadedTabs.has(panel)) {
+                loadedTabs.add(panel);
+                if (panel === "panel-forums") await loadThreads();
+                if (panel === "panel-assignments") await loadAssignmentSubmissions();
+            }
         });
     });
 }
@@ -1284,8 +1295,11 @@ async function checkLecturerAssignment() {
     if (!assignBtn || !removeBtn) return;
     
     try {
-        const response = await fetch(`/courses/${window.COURSE_ID}/members`);
-        const data = await response.json();
+        const [membersRes, availableRes] = await Promise.all([
+            fetch(`/courses/${window.COURSE_ID}/members`),
+            fetch(`/lecturers/${window.APP_CONFIG.userId}/available-courses`)
+        ]);
+        const [data, availableData] = await Promise.all([membersRes.json(), availableRes.json()]);
         
         const isAssigned = data.members?.some(m => 
             m.role === 'lecturer' && m.user_id === window.APP_CONFIG.userId
@@ -1297,10 +1311,6 @@ async function checkLecturerAssignment() {
             statusSpan.innerHTML = '✅ You are currently assigned to this course.';
             statusSpan.style.color = 'var(--success, #10b981)';
         } else {
-            // Check if lecturer can add more courses
-            const availableResponse = await fetch(`/lecturers/${window.APP_CONFIG.userId}/available-courses`);
-            const availableData = await availableResponse.json();
-            
             if (availableData.remaining_slots > 0) {
                 assignBtn.style.display = 'inline-flex';
                 removeBtn.style.display = 'none';

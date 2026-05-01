@@ -8,7 +8,7 @@
 # Yashas               - Course Content, Assignments & Reports (sections, content, assignments, grading)
 # Rommona              - Forums & Discussion Threads (forums, threads, replies, nested comments)
 # Htut                 - Calendar Events (event creation, date filtering, student calendar)
-# [Your Name]          - Full integration, API unification, database schema, file uploads,
+# Group Effort          - Full integration, API unification, database schema, file uploads,
 #                        frontend routes, dashboard, course detail page, styling, testing,
 #                        lecturer self-assign, search bars, scrollable tables, clickable members,
 #                        and final production-ready implementation
@@ -92,6 +92,23 @@ def get_serializer():
     return URLSafeTimedSerializer(os.getenv("APP_SECRET", "comp3161-secret"))
 
 
+def build_user_payload(user):
+    return {
+        "user_id": user["user_id"],
+        "user_code": user["user_code"],
+        "full_name": user["full_name"],
+        "role": user["role_name"],
+    }
+
+
+def create_auth_token(user):
+    return get_serializer().dumps({
+        "user_id": user["user_id"],
+        "user_code": user["user_code"],
+        "role": user["role_name"],
+    })
+
+
 # ============================================================================
 # FRONTEND ROUTES - Integrated by [Your Name]
 # ============================================================================
@@ -170,11 +187,7 @@ def frontend_login():
                 flash("Invalid credentials", "danger")
                 return render_template("login.html")
             
-            token = get_serializer().dumps({
-                "user_id": user["user_id"],
-                "user_code": user["user_code"],
-                "role": user["role_name"],
-            })
+            token = create_auth_token(user)
             
             session["frontend_user"] = {
                 "user_id": user["user_id"],
@@ -189,6 +202,40 @@ def frontend_login():
             conn.close()
     
     return render_template("login.html")
+
+
+@app.post("/auth/login")
+def api_login():
+    """JSON login endpoint for Postman/API clients."""
+    data = request.get_json(silent=True) or {}
+    validation = require_fields(data, ["user_code", "password"])
+    if validation:
+        return validation
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        user = fetch_one(
+            cursor,
+            """SELECT u.user_id, u.user_code, u.full_name, u.password_hash, r.role_name
+               FROM users u JOIN roles r ON r.role_id = u.role_id
+               WHERE u.user_code = %s""",
+            (data["user_code"],),
+        )
+
+        if not user or user["password_hash"] != data["password"]:
+            return api_error("Invalid credentials", 401)
+
+        return jsonify({
+            "token": create_auth_token(user),
+            "user": build_user_payload(user),
+        })
+    except mysql.connector.Error as exc:
+        conn.rollback()
+        return api_error(str(exc), 400)
+    finally:
+        cursor.close()
+        conn.close()
 
 
 @app.route("/app/register", methods=["GET", "POST"])
@@ -238,6 +285,50 @@ def frontend_register():
     return render_template("register.html")
 
 
+@app.post("/auth/register")
+def api_register():
+    """JSON registration endpoint for Postman/API clients."""
+    data = request.get_json(silent=True) or {}
+    validation = require_fields(data, ["user_code", "full_name", "password", "role"])
+    if validation:
+        return validation
+
+    role = str(data["role"]).strip().lower()
+    if role not in ROLE_IDS:
+        return api_error("Role must be admin, lecturer, or student.", 400)
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            """INSERT INTO users (user_code, full_name, email, password_hash, role_id)
+               VALUES (%s, %s, %s, %s, %s)""",
+            (
+                data["user_code"].strip(),
+                data["full_name"].strip(),
+                data.get("email"),
+                data["password"],
+                ROLE_IDS[role],
+            ),
+        )
+        conn.commit()
+
+        user = fetch_one(
+            cursor,
+            """SELECT u.user_id, u.user_code, u.full_name, r.role_name
+               FROM users u JOIN roles r ON r.role_id = u.role_id
+               WHERE u.user_id = %s""",
+            (cursor.lastrowid,),
+        )
+        return jsonify({"user": build_user_payload(user)}), 201
+    except mysql.connector.Error as exc:
+        conn.rollback()
+        return api_error(str(exc), 400)
+    finally:
+        cursor.close()
+        conn.close()
+
+
 @app.get("/app/logout")
 def frontend_logout():
     session.clear()
@@ -273,8 +364,34 @@ def uploaded_file(filename):
 
 def require_session():
     if "frontend_user" not in session:
-        return None
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return None
+
+        token = auth_header.split(" ", 1)[1].strip()
+        if not token:
+            return None
+
+        try:
+            payload = get_serializer().loads(token)
+        except Exception:
+            return None
+
+        return {
+            "user_id": payload.get("user_id"),
+            "user_code": payload.get("user_code"),
+            "role": payload.get("role"),
+            "token": token,
+        }
     return session["frontend_user"]
+
+
+def require_staff_user(current_user):
+    return current_user and current_user.get("role") in {"admin", "lecturer"}
+
+
+def require_admin_user(current_user):
+    return current_user and current_user.get("role") == "admin"
 
 
 # ============================================================================
@@ -380,6 +497,10 @@ def assign_lecturer(course_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
+        existing = fetch_one(cursor, "SELECT lecturer_id FROM course_lecturers WHERE course_id = %s", (course_id,))
+        if existing:
+            return api_error("Course already has an assigned lecturer", 409)
+
         cursor.execute("INSERT INTO course_lecturers (course_id, lecturer_id) VALUES (%s, %s)", 
                       (course_id, data["lecturer_id"]))
         conn.commit()
@@ -410,7 +531,7 @@ def get_all_courses_list():
                           COUNT(ce.student_id) as student_count
                    FROM courses c
                    LEFT JOIN course_enrollments ce ON ce.course_id = c.course_id
-                   GROUP BY c.course_id
+                   GROUP BY c.course_id, c.course_code, c.course_name, c.description
                    ORDER BY c.course_code"""
             )
         else:
@@ -445,8 +566,18 @@ def create_new_course():
                VALUES (%s, %s, %s, %s)""",
             (data["course_code"], data["course_name"], data.get("description"), current_user["user_id"]),
         )
+        course_id = cursor.lastrowid
         conn.commit()
-        return jsonify({"message": "Course created successfully", "course_id": cursor.lastrowid}), 201
+        return jsonify({
+            "message": "Course created successfully",
+            "course_id": course_id,
+            "course": {
+                "course_id": course_id,
+                "course_code": data["course_code"],
+                "course_name": data["course_name"],
+                "description": data.get("description"),
+            },
+        }), 201
     except mysql.connector.Error as exc:
         conn.rollback()
         return api_error(str(exc), 400)
@@ -708,6 +839,8 @@ def create_calendar_event(course_id):
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
+    if not require_staff_user(current_user):
+        return api_error("Only lecturers or admins can create sections", 403)
     
     data = request.get_json(silent=True) or {}
     validation = require_fields(data, ["title", "start_datetime"])
@@ -815,6 +948,8 @@ def create_forum(course_id):
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
+    if not require_staff_user(current_user):
+        return api_error("Only lecturers or admins can create forums", 403)
     
     data = request.get_json(silent=True) or {}
     validation = require_fields(data, ["title"])
@@ -908,8 +1043,22 @@ def create_reply(thread_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
+        thread = fetch_one(cursor, "SELECT thread_id FROM discussion_threads WHERE thread_id = %s", (thread_id,))
+        if not thread:
+            return api_error("Thread not found", 404)
+
+        parent_post_id = data.get("parent_post_id")
+        if parent_post_id:
+            parent = fetch_one(
+                cursor,
+                "SELECT post_id FROM thread_posts WHERE post_id = %s AND thread_id = %s",
+                (parent_post_id, thread_id),
+            )
+            if not parent:
+                return api_error("Parent post not found", 404)
+
         cursor.execute("INSERT INTO thread_posts (thread_id, parent_post_id, user_id, body) VALUES (%s, %s, %s, %s)",
-                      (thread_id, data.get("parent_post_id"), current_user["user_id"], data["body"]))
+                      (thread_id, parent_post_id, current_user["user_id"], data["body"]))
         conn.commit()
         return jsonify({"message": "Reply added successfully", "post_id": cursor.lastrowid}), 201
     finally:
@@ -923,6 +1072,10 @@ def get_thread_posts(thread_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
+        thread = fetch_one(cursor, "SELECT thread_id FROM discussion_threads WHERE thread_id = %s", (thread_id,))
+        if not thread:
+            return api_error("Thread not found", 404)
+
         posts = fetch_all(cursor, 
             """SELECT tp.post_id, tp.thread_id, tp.parent_post_id, tp.user_id, tp.body, tp.created_at,
                       u.full_name, u.user_code
@@ -1009,6 +1162,8 @@ def add_course_content(section_id):
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
+    if not require_staff_user(current_user):
+        return api_error("Only lecturers or admins can add content", 403)
     
     if request.content_type and "multipart/form-data" in request.content_type:
         data = request.form.to_dict()
@@ -1020,6 +1175,8 @@ def add_course_content(section_id):
     validation = require_fields(data, ["title", "content_type"])
     if validation:
         return validation
+    if data["content_type"] not in {"link", "file", "slide"}:
+        return api_error("content_type must be link, file, or slide", 400)
     
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -1050,6 +1207,48 @@ def add_course_content(section_id):
             "file_url": file_url,
             "download_url": download_url,
         }), 201
+    except mysql.connector.Error as exc:
+        conn.rollback()
+        return api_error(str(exc), 400)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.put("/content/<int:content_id>")
+def update_course_content(content_id):
+    """Update course content metadata."""
+    current_user = require_session()
+    if not current_user:
+        return api_error("Authentication required", 401)
+    if not require_staff_user(current_user):
+        return api_error("Only lecturers or admins can update content", 403)
+
+    data = request.get_json(silent=True) or {}
+    validation = require_fields(data, ["title", "content_type"])
+    if validation:
+        return validation
+    if data["content_type"] not in {"link", "file", "slide"}:
+        return api_error("content_type must be link, file, or slide", 400)
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        existing = fetch_one(cursor, "SELECT content_id FROM course_contents WHERE content_id = %s", (content_id,))
+        if not existing:
+            return api_error("Content not found", 404)
+
+        cursor.execute(
+            """UPDATE course_contents
+               SET title = %s, content_type = %s, resource_url = %s, description = %s
+               WHERE content_id = %s""",
+            (data["title"], data["content_type"], data.get("resource_url"), data.get("description"), content_id),
+        )
+        conn.commit()
+        return jsonify({"message": "Content updated successfully", "content_id": content_id})
+    except mysql.connector.Error as exc:
+        conn.rollback()
+        return api_error(str(exc), 400)
     finally:
         cursor.close()
         conn.close()
@@ -1110,6 +1309,8 @@ def create_assignment(course_id):
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
+    if not require_staff_user(current_user):
+        return api_error("Only lecturers or admins can create assignments", 403)
     
     data = request.get_json(silent=True) or {}
     validation = require_fields(data, ["title", "due_datetime"])
@@ -1160,6 +1361,113 @@ def submit_assignment(assignment_id):
         )
         conn.commit()
         return jsonify({"message": "Assignment submitted successfully", "submission_id": cursor.lastrowid}), 201
+    except mysql.connector.Error as exc:
+        conn.rollback()
+        return api_error(str(exc), 400)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.get("/assignments/<int:assignment_id>/submissions")
+def get_assignment_submissions(assignment_id):
+    """List submissions for an assignment (lecturer/admin only)."""
+    current_user = require_session()
+    if not current_user:
+        return api_error("Authentication required", 401)
+    if not require_staff_user(current_user):
+        return api_error("Only lecturers or admins can view submissions", 403)
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        assignment = fetch_one(
+            cursor,
+            "SELECT assignment_id, max_score FROM assignments WHERE assignment_id = %s",
+            (assignment_id,),
+        )
+        if not assignment:
+            return api_error("Assignment not found", 404)
+
+        submissions = fetch_all(
+            cursor,
+            """SELECT s.submission_id, s.assignment_id, s.student_id, u.user_code, u.full_name,
+                      s.submission_text, s.submission_url, s.submitted_at,
+                      ag.grade_id, ag.score, ag.feedback, ag.graded_at
+               FROM assignment_submissions s
+               JOIN users u ON u.user_id = s.student_id
+               LEFT JOIN assignment_grades ag ON ag.submission_id = s.submission_id
+               WHERE s.assignment_id = %s
+               ORDER BY s.submitted_at DESC""",
+            (assignment_id,),
+        )
+
+        for submission in submissions:
+            if submission.get("submitted_at"):
+                submission["submitted_at"] = str(submission["submitted_at"])
+            if submission.get("graded_at"):
+                submission["graded_at"] = str(submission["graded_at"])
+
+        return jsonify({
+            "assignment_id": assignment_id,
+            "max_score": assignment["max_score"],
+            "count": len(submissions),
+            "submissions": submissions,
+        })
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.post("/submissions/<int:submission_id>/grade")
+def grade_submission(submission_id):
+    """Create or update a grade for a submission."""
+    current_user = require_session()
+    if not current_user:
+        return api_error("Authentication required", 401)
+    if not require_staff_user(current_user):
+        return api_error("Only lecturers or admins can grade submissions", 403)
+
+    data = request.get_json(silent=True) or {}
+    validation = require_fields(data, ["score"])
+    if validation:
+        return validation
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        submission = fetch_one(
+            cursor,
+            """SELECT s.submission_id, a.max_score
+               FROM assignment_submissions s
+               JOIN assignments a ON a.assignment_id = s.assignment_id
+               WHERE s.submission_id = %s""",
+            (submission_id,),
+        )
+        if not submission:
+            return api_error("Submission not found", 404)
+
+        try:
+            score = float(data["score"])
+        except (TypeError, ValueError):
+            return api_error("Score must be numeric", 400)
+
+        max_score = float(submission["max_score"])
+        if score < 0 or score > max_score:
+            return api_error(f"Score must be between 0 and {max_score:g}", 400)
+
+        cursor.execute(
+            """INSERT INTO assignment_grades (submission_id, graded_by, score, feedback)
+               VALUES (%s, %s, %s, %s)
+               ON DUPLICATE KEY UPDATE
+                   graded_by = VALUES(graded_by),
+                   score = VALUES(score),
+                   feedback = VALUES(feedback),
+                   graded_at = CURRENT_TIMESTAMP""",
+            (submission_id, current_user["user_id"], score, data.get("feedback")),
+        )
+        conn.commit()
+        return jsonify({"message": "Submission graded successfully", "submission_id": submission_id, "score": score})
     except mysql.connector.Error as exc:
         conn.rollback()
         return api_error(str(exc), 400)
@@ -1334,6 +1642,8 @@ def report_courses_50_plus():
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
+    if not require_admin_user(current_user):
+        return api_error("Only admins can view reports", 403)
     
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -1358,6 +1668,8 @@ def report_students_5_plus():
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
+    if not require_admin_user(current_user):
+        return api_error("Only admins can view reports", 403)
     
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -1383,6 +1695,8 @@ def report_lecturers_3_plus():
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
+    if not require_admin_user(current_user):
+        return api_error("Only admins can view reports", 403)
     
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -1408,6 +1722,8 @@ def report_top_10_courses():
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
+    if not require_admin_user(current_user):
+        return api_error("Only admins can view reports", 403)
     
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -1433,6 +1749,8 @@ def report_top_10_students():
     current_user = require_session()
     if not current_user:
         return api_error("Authentication required", 401)
+    if not require_admin_user(current_user):
+        return api_error("Only admins can view reports", 403)
     
     conn = get_db()
     cursor = conn.cursor(dictionary=True)

@@ -143,6 +143,7 @@ DROP TEMPORARY TABLE IF EXISTS temp_enrollments;
 CREATE TEMPORARY TABLE temp_enrollments (
     student_id INT,
     course_id INT,
+    PRIMARY KEY (student_id, course_id),
     UNIQUE KEY unique_enrollment (student_id, course_id)
 );
 

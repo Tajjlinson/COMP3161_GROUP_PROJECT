@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "COMP3161 Course Management API",
-    "description": "Full test suite for the COMP3161 Course Management System. Set the `base_url` variable to your server (e.g. http://127.0.0.1:5000). Tokens are captured automatically after login — run Auth > Login Admin first, then the rest of the collection will work.",
+    "description": "Full test suite for the COMP3161 Course Management System. Set the `base_url` variable to your local server or Render URL. Tokens are captured automatically after login — run Auth > Login Admin, Login Lecturer, and Login Student before protected requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "comp3161"
   },
@@ -17,8 +17,8 @@
     { "key": "submission_id",  "value": "1",                       "type": "string" },
     { "key": "forum_id",       "value": "1",                       "type": "string" },
     { "key": "thread_id",      "value": "1",                       "type": "string" },
-    { "key": "student_id",     "value": "3",                       "type": "string" },
-    { "key": "lecturer_id",    "value": "2",                       "type": "string" }
+    { "key": "student_id",     "value": "51",                      "type": "string" },
+    { "key": "lecturer_id",    "value": "10",                      "type": "string" }
   ],
   "item": [
 
@@ -34,7 +34,7 @@
             "url": "{{base_url}}/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_code\": \"ADM001\",\n  \"full_name\": \"Admin User\",\n  \"email\": \"admin@uwi.edu\",\n  \"password\": \"admin123\",\n  \"role\": \"admin\"\n}"
+              "raw": "{\n  \"user_code\": \"PMADM{{$timestamp}}\",\n  \"full_name\": \"Postman Admin User\",\n  \"email\": \"pm-admin-{{$timestamp}}@uwi.edu\",\n  \"password\": \"admin123\",\n  \"role\": \"admin\"\n}"
             }
           },
           "event": [{
@@ -54,7 +54,7 @@
             "url": "{{base_url}}/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_code\": \"LEC001\",\n  \"full_name\": \"Dr. Ricardo Anderson\",\n  \"email\": \"lecturer@uwi.edu\",\n  \"password\": \"lecturer123\",\n  \"role\": \"lecturer\"\n}"
+              "raw": "{\n  \"user_code\": \"PMLEC{{$timestamp}}\",\n  \"full_name\": \"Postman Lecturer User\",\n  \"email\": \"pm-lecturer-{{$timestamp}}@uwi.edu\",\n  \"password\": \"lecturer123\",\n  \"role\": \"lecturer\"\n}"
             }
           },
           "event": [{
@@ -73,7 +73,7 @@
             "url": "{{base_url}}/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_code\": \"STU001\",\n  \"full_name\": \"Rommonna Wright\",\n  \"email\": \"student@uwi.edu\",\n  \"password\": \"student123\",\n  \"role\": \"student\"\n}"
+              "raw": "{\n  \"user_code\": \"PMSTU{{$timestamp}}\",\n  \"full_name\": \"Postman Student User\",\n  \"email\": \"pm-student-{{$timestamp}}@uwi.edu\",\n  \"password\": \"student123\",\n  \"role\": \"student\"\n}"
             }
           },
           "event": [{
@@ -112,7 +112,7 @@
             "url": "{{base_url}}/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_code\": \"ADM001\",\n  \"password\": \"admin123\"\n}"
+              "raw": "{\n  \"user_code\": \"admin\",\n  \"password\": \"password123\"\n}"
             }
           },
           "event": [{
@@ -134,7 +134,7 @@
             "url": "{{base_url}}/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_code\": \"LEC001\",\n  \"password\": \"lecturer123\"\n}"
+              "raw": "{\n  \"user_code\": \"lect01\",\n  \"password\": \"password123\"\n}"
             }
           },
           "event": [{
@@ -156,7 +156,7 @@
             "url": "{{base_url}}/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_code\": \"STU001\",\n  \"password\": \"student123\"\n}"
+              "raw": "{\n  \"user_code\": \"stud0001\",\n  \"password\": \"password123\"\n}"
             }
           },
           "event": [{
@@ -178,7 +178,7 @@
             "url": "{{base_url}}/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_code\": \"ADM001\",\n  \"password\": \"wrongpassword\"\n}"
+              "raw": "{\n  \"user_code\": \"admin\",\n  \"password\": \"wrongpassword\"\n}"
             }
           },
           "event": [{
@@ -197,7 +197,7 @@
             "url": "{{base_url}}/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_code\": \"ADM001\"\n}"
+              "raw": "{\n  \"user_code\": \"admin\"\n}"
             }
           },
           "event": [{
@@ -226,7 +226,7 @@
             "url": "{{base_url}}/courses",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"course_code\": \"COMP3161\",\n  \"course_name\": \"Database Management Systems\",\n  \"description\": \"SQL and relational theory\"\n}"
+              "raw": "{\n  \"course_code\": \"PM{{$timestamp}}\",\n  \"course_name\": \"Postman Database Management Systems\",\n  \"description\": \"SQL and relational theory\"\n}"
             }
           },
           "event": [{
@@ -251,7 +251,7 @@
             "url": "{{base_url}}/courses",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"course_code\": \"COMP3161\",\n  \"course_name\": \"Duplicate Course\"\n}"
+              "raw": "{\n  \"course_code\": \"CS001\",\n  \"course_name\": \"Duplicate Course\"\n}"
             }
           },
           "event": [{
@@ -1468,7 +1468,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
-            "url": "{{base_url}}/students/999/courses"
+            "url": "{{base_url}}/students/52/courses"
           },
           "event": [{
             "listen": "test",
@@ -1483,7 +1483,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{lecturer_token}}" }],
-            "url": "{{base_url}}/lecturers/999/courses"
+            "url": "{{base_url}}/lecturers/11/courses"
           },
           "event": [{
             "listen": "test",
