@@ -7,9 +7,11 @@ app = Flask(__name__)
 db = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="",  # Your password
+            password="Raoul@123",  # Your password
             database="ourvle"  # Your database name
         )
+
+
     
 def get_cursor():
     return db.cursor(dictionary=True)
@@ -70,6 +72,7 @@ def get_course_content(course_id):
 
     return jsonify(data)
 
+
 #''''''''''ASSIGNMENT ENDPOINTS''''''''''''
 #create assignment
 
@@ -102,6 +105,7 @@ def get_assignments(course_id):
     data = cursor.fetchall()
 
     return jsonify(data)
+
 
 #''''''''''SUBMISSION ENDPOINTS''''''''''''
 
@@ -148,6 +152,141 @@ def get_submissions(assignment_id):
     return jsonify(data)
 
 
+#''''''''''REPORTS ENDPOINTS''''''''''''
+
+# Report 1: Courses with 50 or more students
+@app.route('/reports/courses-over-50', methods=['GET'])
+def report_courses_over_50():
+    cursor = get_cursor()
+    
+    query = """
+        SELECT 
+            c.course_id,
+            c.title,
+            COUNT(e.student_id) AS total_students
+        FROM course c
+        INNER JOIN enrollment e ON c.course_id = e.course_id
+        GROUP BY c.course_id, c.title
+        HAVING total_students >= 50
+        ORDER BY total_students DESC
+    """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    
+    return jsonify({
+        "report": "Courses with 50 or more students",
+        "count": len(results),
+        "data": results
+    })
+
+
+# Report 2: Students that do 5 or more courses
+@app.route('/reports/students-5-plus-courses', methods=['GET'])
+def report_students_5_plus():
+    cursor = get_cursor()
+    
+    query = """
+        SELECT 
+            u.user_id,
+            u.full_name,
+            u.username,
+            COUNT(e.course_id) AS course_count
+        FROM user u
+        INNER JOIN enrollment e ON u.user_id = e.student_id
+        WHERE u.role = 'student'
+        GROUP BY u.user_id, u.full_name, u.username
+        HAVING course_count >= 5
+        ORDER BY course_count DESC
+    """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    
+    return jsonify({
+        "report": "Students enrolled in 5 or more courses",
+        "count": len(results),
+        "data": results
+    })
+
+
+# Report 3: Lecturers that teach 3 or more courses
+@app.route('/reports/lecturers-3-plus-courses', methods=['GET'])
+def report_lecturers_3_plus():
+    cursor = get_cursor()
+    
+    query = """
+        SELECT 
+            u.user_id,
+            u.full_name,
+            u.username,
+            COUNT(cl.course_id) AS course_count
+        FROM user u
+        INNER JOIN course_lecturer cl ON u.user_id = cl.lecturer_id
+        WHERE u.role = 'lecturer'
+        GROUP BY u.user_id, u.full_name, u.username
+        HAVING course_count >= 3
+        ORDER BY course_count DESC
+    """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    
+    return jsonify({
+        "report": "Lecturers teaching 3 or more courses",
+        "count": len(results),
+        "data": results
+    })
+
+
+# Report 4: Top 10 most enrolled courses
+@app.route('/reports/top-10-courses', methods=['GET'])
+def report_top_10_courses():
+    cursor = get_cursor()
+    
+    query = """
+        SELECT 
+            c.course_id,
+            c.title,
+            COUNT(e.student_id) AS enrollment_count
+        FROM course c
+        INNER JOIN enrollment e ON c.course_id = e.course_id
+        GROUP BY c.course_id, c.title
+        ORDER BY enrollment_count DESC
+        LIMIT 10
+    """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    
+    return jsonify({
+        "report": "Top 10 most enrolled courses",
+        "data": results
+    })
+
+
+# Report 5: Top 10 students with highest overall averages
+@app.route('/reports/top-10-students', methods=['GET'])
+def report_top_10_students():
+    cursor = get_cursor()
+    
+    query = """
+        SELECT 
+            u.user_id,
+            u.full_name,
+            u.username,
+            ROUND(AVG(s.grade), 2) AS average_grade,
+            COUNT(s.submission_id) AS graded_submissions
+        FROM user u
+        INNER JOIN submission s ON u.user_id = s.student_id
+        WHERE u.role = 'student' AND s.grade IS NOT NULL
+        GROUP BY u.user_id, u.full_name, u.username
+        ORDER BY average_grade DESC
+        LIMIT 10
+    """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    
+    return jsonify({
+        "report": "Top 10 students by highest overall averages",
+        "data": results
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
